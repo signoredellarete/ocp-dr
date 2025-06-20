@@ -1,0 +1,21 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: PolicyGenerator
+metadata:
+  name: policy-generator-dr-local-storage
+placementBindingDefaults:
+  name: binding-hub-infra
+policyDefaults:
+  placement:
+    clusterSelector:
+      matchExpressions:
+        - {key: name, operator: In, values: ["local-cluster"]}
+  remediationAction: enforce
+  severity: medium
+  namespace: open-cluster-management
+policies:
+  - name: policy-dr-local-storage
+    manifests:
+      - path: 01_namespace.yaml
+      - path: 02_operatorgroup.yaml
+      - path: 03_subscription.yaml
+      #- path: 04_localvolume.yaml
