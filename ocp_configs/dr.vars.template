@@ -8,6 +8,7 @@ export OCP_CLUSTER_NAME="ocp-cluster"
 export OCP_PULL_SECRET_PATH="/path/to/your/pull-secret.json"
 export OCP_SSH_KEY_PATH="/path/to/your/id_rsa.pub"
 export OCP_INSTALL_DIR="/home/kni/ocp_install_dir" # Directory to store installation files
+export OCP_INSTALL_DIR_BACKUP="/home/kni/ocp_install_dir_bck" # Directory to backup install-config.yaml
 
 #-----------------------------------------------------------------------
 # OCP Sizing Details (Master Nodes)
