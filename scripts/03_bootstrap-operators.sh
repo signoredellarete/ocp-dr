@@ -1,10 +1,10 @@
 #!/bin/bash
 set -e
 
-# Source dr.vars
+# Load environment variables from config file
 source ../ocp_configs/dr.vars
 
-# Set KUBECONFIG
+# Set KUBECONFIG to connect to the new cluster
 export KUBECONFIG=${OCP_INSTALL_DIR}/auth/kubeconfig
 
 echo "--- Bootstrapping Infrastructure Operators (ACM Only) ---"
@@ -20,7 +20,16 @@ wait_for_operator() {
 
 # --- 1. Install Advanced Cluster Management (ACM) ---
 echo -e "\n--- Installing Advanced Cluster Management (ACM) ---"
+
+# --- RIGA AGGIUNTA ---
+# Create the target namespace first, this is idempotent
+echo "[ACTION] Ensuring namespace 'open-cluster-management' exists..."
+oc apply -f ../dr-bootstrap/acm/00_namespace.yaml
+
+# Now apply the subscription into the existing namespace
+echo "[ACTION] Applying ACM Subscription..."
 oc apply -f ../dr-bootstrap/acm/01_subscription.yaml
+
 wait_for_operator "open-cluster-management"
 
 echo "Applying MultiClusterHub configuration..."
@@ -36,7 +45,7 @@ echo " MultiClusterHub is running."
 # --- 2. Apply the ACM Application that points to the Kustomize Git Repo ---
 echo -e "\n--- Applying ACM Application to enable GitOps ---"
 
-# Apply manifests for GitOps application Subscription
+# Apply all manifests that define our GitOps Application
 oc apply -f ../dr-bootstrap/acm/03_application.yaml
 oc apply -f ../dr-bootstrap/acm/04_placement.yaml
 oc apply -f ../dr-bootstrap/acm/05_subscription.yaml
