@@ -1,11 +1,10 @@
 #!/bin/bash
 set -e
 
-# Carica le variabili di ambiente dal file dr.vars
+# Source dr.vars
 source ../ocp_configs/dr.vars
 
-# Imposta il KUBECONFIG per puntare al cluster appena creato
-# <-- RIGA FONDAMENTALE MANCANTE, AGGIUNTA ORA
+# Set KUBECONFIG
 export KUBECONFIG=${OCP_INSTALL_DIR}/auth/kubeconfig
 
 echo "--- Bootstrapping Infrastructure Operators (ACM Only) ---"
@@ -37,7 +36,7 @@ echo " MultiClusterHub is running."
 # --- 2. Apply the ACM Application that points to the Kustomize Git Repo ---
 echo -e "\n--- Applying ACM Application to enable GitOps ---"
 
-# Applichiamo i manifest che definiscono la nostra applicazione GitOps
+# Apply manifests for GitOps application Subscription
 oc apply -f ../dr-bootstrap/acm/03_application.yaml
 oc apply -f ../dr-bootstrap/acm/04_placement.yaml
 oc apply -f ../dr-bootstrap/acm/05_subscription.yaml
