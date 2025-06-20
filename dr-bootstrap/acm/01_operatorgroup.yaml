@@ -1,10 +1,8 @@
+# dr-bootstrap/acm/01_operatorgroup.yaml (Corretto)
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: acm-operatorgroup
   namespace: open-cluster-management
 spec:
-  # Lasciando targetNamespaces vuoto, si indica a OLM che questo operatore
-  # gestirà risorse solo all'interno del suo stesso namespace.
-  # È la configurazione più comune e sicura per iniziare.
-  targetNamespaces: []
+  {}
