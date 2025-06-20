@@ -7,11 +7,17 @@ metadata:
     app: hub-infra-operators
   annotations:
     apps.open-cluster-management.io/git-branch: main
-    # --- PATH AGGIORNATO ---
     apps.open-cluster-management.io/github-path: hub-cluster-config/overlays/hub-dr-cluster
     apps.open-cluster-management.io/reconcile-option: merge
 spec:
-  channel: signoredellarete/ocp-dr
+  channel:
+    type: GitHub
+    pathname: https://github.com/signoredellarete/ocp-dr.git
+  
+  # Auth secret
+  secretRef:
+    name: github-credentials
+
   placement:
     placementRef:
       kind: Placement
