@@ -7,51 +7,35 @@ export KUBECONFIG=${OCP_INSTALL_DIR}/auth/kubeconfig
 
 echo "--- Bootstrapping Infrastructure Operators (ACM Only) ---"
 
-# Function to wait for a CRD to be established
-wait_for_crd() {
-    echo "Waiting for CRD $1 to be established..."
-    until oc get crd $1 &> /dev/null; do
-        sleep 15
-        echo -n "."
-    done
-    echo " CRD $1 is available."
-}
-
-# Function to wait for an operator to be ready
-wait_for_operator() {
-    echo "Waiting for operator in namespace $1 to be ready..."
-    # Loop until the CSV status is Succeeded
-    until oc get csv -n $1 -o jsonpath='{.items[0].status.phase}' 2>/dev/null | grep -q "Succeeded"; do
-        sleep 15
-        echo -n "."
-    done
-    echo " Operator in namespace $1 is ready."
-}
+# ... (le funzioni wait_for_crd e wait_for_operator rimangono invariate) ...
+wait_for_crd() { echo "Waiting for CRD $1..."; until oc get crd $1 &>/dev/null; do sleep 15; echo -n "."; done; echo " OK"; }
+wait_for_operator() { echo "Waiting for operator in ns $1..."; until oc get csv -n $1 -o jsonpath='{.items[0].status.phase}' 2>/dev/null | grep -q "Succeeded"; do sleep 15; echo -n "."; done; echo " OK"; }
 
 # --- 1. Install Advanced Cluster Management (ACM) ---
 echo -e "\n--- Installing Advanced Cluster Management (ACM) ---"
-# ACM creates its own namespace via the subscription
 oc apply -f ../dr-bootstrap/acm/01_subscription.yaml
 wait_for_operator "open-cluster-management"
-
 echo "Applying MultiClusterHub configuration..."
 oc apply -f ../dr-bootstrap/acm/02_multiclusterhub.yaml
-
-echo "Waiting for MultiClusterHub to be available (this can take several minutes)..."
+echo "Waiting for MultiClusterHub to be available..."
 until oc get mch -n open-cluster-management multiclusterhub -o jsonpath='{.status.phase}' 2>/dev/null | grep -q "Running"; do
     sleep 20
     echo -n "."
 done
 echo " MultiClusterHub is running."
 
+# --- 2. Apply the ACM Application that points to the Kustomize Git Repo ---
+echo -e "\n--- Applying ACM Application to enable GitOps ---"
 
-# --- 2. Apply Initial Hub Policy ---
-echo -e "\n--- Applying Initial Policy to let ACM manage itself ---"
-# This policy tells ACM to look at the Git repo for its own configuration
-oc apply -f ../dr-bootstrap/acm/03_hub-cluster-policy.yaml
+# Applichiamo tutti i manifest che definiscono la nostra applicazione GitOps
+oc apply -k ../applications/hub-infra/
 
-echo "ACM installation is complete."
-echo "From this point, ACM's GitOps engine will take over."
-echo "Monitor the 'local-cluster' policies in the ACM console to see progress on LSO, ODF, etc."
+if [ $? -eq 0 ]; then
+    echo "Hub Infrastructure Application applied successfully."
+    echo "ACM will now connect to the Git repository and apply the Kustomize configuration."
+else
+    echo -e "[ERROR] Failed to apply the ACM Application manifests."
+    exit 1
+fi
 
 echo "--- Operator Bootstrap Script Finished ---"
