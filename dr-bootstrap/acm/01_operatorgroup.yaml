@@ -1,8 +1,8 @@
-# dr-bootstrap/acm/01_operatorgroup.yaml (Corretto)
 apiVersion: operators.coreos.com/v1
 kind: OperatorGroup
 metadata:
   name: acm-operatorgroup
   namespace: open-cluster-management
 spec:
-  {}
+  targetNamespaces:
+    - open-cluster-management
