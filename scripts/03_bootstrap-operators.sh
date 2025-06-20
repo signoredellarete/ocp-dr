@@ -21,19 +21,23 @@ wait_for_operator() {
 # --- 1. Install Advanced Cluster Management (ACM) ---
 echo -e "\n--- Installing Advanced Cluster Management (ACM) ---"
 
-# --- RIGA AGGIUNTA ---
-# Create the target namespace first, this is idempotent
+# Create the target namespace first
 echo "[ACTION] Ensuring namespace 'open-cluster-management' exists..."
 oc apply -f ../dr-bootstrap/acm/00_namespace.yaml
 
-# Now apply the subscription into the existing namespace
+# --- RIGA AGGIUNTA ---
+# Create the OperatorGroup in the namespace
+echo "[ACTION] Applying OperatorGroup..."
+oc apply -f ../dr-bootstrap/acm/01_operatorgroup.yaml
+
+# Now apply the subscription into the configured namespace
 echo "[ACTION] Applying ACM Subscription..."
-oc apply -f ../dr-bootstrap/acm/01_subscription.yaml
+oc apply -f ../dr-bootstrap/acm/02_subscription.yaml
 
 wait_for_operator "open-cluster-management"
 
 echo "Applying MultiClusterHub configuration..."
-oc apply -f ../dr-bootstrap/acm/02_multiclusterhub.yaml
+oc apply -f ../dr-bootstrap/acm/03_multiclusterhub.yaml
 
 echo "Waiting for MultiClusterHub to be available..."
 until oc get mch -n open-cluster-management multiclusterhub -o jsonpath='{.status.phase}' 2>/dev/null | grep -q "Running"; do
@@ -46,9 +50,9 @@ echo " MultiClusterHub is running."
 echo -e "\n--- Applying ACM Application to enable GitOps ---"
 
 # Apply all manifests that define our GitOps Application
-oc apply -f ../dr-bootstrap/acm/03_application.yaml
-oc apply -f ../dr-bootstrap/acm/04_placement.yaml
-oc apply -f ../dr-bootstrap/acm/05_subscription.yaml
+oc apply -f ../dr-bootstrap/acm/04_application.yaml
+oc apply -f ../dr-bootstrap/acm/05_placement.yaml
+oc apply -f ../dr-bootstrap/acm/06_subscription.yaml
 
 if [ $? -eq 0 ]; then
     echo "Hub Infrastructure Application bootstrapped."
