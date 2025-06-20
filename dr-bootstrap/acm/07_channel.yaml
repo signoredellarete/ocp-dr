@@ -1,0 +1,10 @@
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  name: github-repo-channel
+  namespace: open-cluster-management
+spec:
+  type: GitHub
+  pathname: https://github.com/signoredellarete/ocp-dr.git
+  secretRef:
+    name: github-credentials
