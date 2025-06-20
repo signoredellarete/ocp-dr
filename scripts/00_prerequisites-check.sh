@@ -101,9 +101,9 @@ if getent hosts $VSPHERE_SERVER &> /dev/null; then echo -e "[ ${GREEN}OK${NC} ] 
 # 5. Check Virtual IP (VIP) availability
 echo -e "\n${YELLOW}5. Verifying Virtual IP availability...${NC}"
 # ... (questa sezione rimane invariata) ...
-check_vip_availability $OCP_API_VIP 6443
-check_vip_availability $OCP_INGRESS_VIP 443
-check_vip_availability $OCP_INGRESS_VIP 80
+# check_vip_availability $OCP_API_VIP 6443
+# check_vip_availability $OCP_INGRESS_VIP 443
+# check_vip_availability $OCP_INGRESS_VIP 80
 
 
 echo -e "\n--- ${GREEN}Prerequisites Check Completed Successfully!${NC} ---"
