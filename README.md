@@ -38,8 +38,9 @@ Before starting this procedure, ensure **every single one** of the following con
 - [ ] **Confirmation Received:** The **Systems Team** has confirmed that the Bastion, Git, and Quay VMs have been successfully restored by Kasten, powered on, and have network connectivity.
 - [ ] **Confirmation Received:** The **Network Team** has confirmed that all required DR networking, firewall rules, and DNS configurations are active and in place.
 - [ ] **Access:** You have SSH access to the restored Bastion Host (`dr-bastion.example.com`).
+- [ ] **Permissions:** The user on the Bastion Host has **`sudo` privileges** to manage system-wide certificate trust stores.
 - [ ] **Git Repository:** The infrastructure Git repository has been cloned to the Bastion Host (e.g., in `/home/kni/infra-repo`).
-- [ ] **Configuration:** All variables in the `ocp_configs/dr.vars` file have been reviewed and populated with the correct values for the DR environment.
+- [ ] **Configuration:** All variables in the `ocp_configs/dr.vars` file have been reviewed and populated, including the new `VSPHERE_CERT_PATH`.
 
 **DO NOT PROCEED UNLESS ALL PREREQUISITES ARE MET.**
 
@@ -134,7 +135,49 @@ Execute these steps sequentially from the Bastion Host's command line.
 
 ## 4. Appendix
 
-### Appendix A: Troubleshooting
-* **Installation Fails:** Check the log file `ocp_install_dir/.openshift_install.log` for detailed error messages. Common issues are related to vCenter credentials or network connectivity.
+### Appendix A: Placeholder Variables
+
+This section lists all variables defined in the `ocp_configs/dr.vars` file. Ensure all these are correctly populated before starting the procedure.
+
+| Variable Name | Description |
+|---|---|
+| **Cluster Details** | |
+| `OCP_CLUSTER_NAME` | The name of the OpenShift cluster. |
+| `OCP_BASE_DOMAIN` | The base domain for the cluster (e.g., example.com). |
+| `OCP_PULL_SECRET_PATH` | Absolute path to the file containing your Red Hat pull secret JSON. |
+| `OCP_SSH_KEY_PATH` | Absolute path to the public SSH key file for node access. |
+| `OCP_INSTALL_DIR` | A local directory on the bastion to store installation artifacts. |
+| **Sizing Details** | |
+| `OCP_MASTER_CPU` | Number of vCPUs for each master node. |
+| `OCP_CORES_PER_SOCKET` | Number of cores per socket for master nodes. |
+| `OCP_MASTER_MEMORY`| Memory in MB for each master node (e.g., 32768 for 32GB). |
+| `OCP_DISK_SIZE_GB` | Size of the OS disk in GB for master nodes. |
+| **Networking Details**| |
+| `OCP_API_VIP` | The static virtual IP for the cluster's API endpoint. Must be free. |
+| `OCP_INGRESS_VIP` | The static virtual IP for user-facing application traffic. Must be free. |
+| `OCP_CLUSTER_NETWORK_CIDR`| The IP address block for Pods (internal to the cluster). |
+| `OCP_MACHINE_NETWORK_CIDR`| The IP address block where the cluster nodes (VMs) will be created. |
+| `OCP_SERVICE_NETWORK_CIDR`| The IP address block for Services (internal to the cluster). |
+| **vSphere Details** | |
+| `VSPHERE_SERVER` | FQDN or IP address of the DR vCenter Server. |
+| `VSPHERE_CERT_PATH` | **(New)** Absolute path to the vCenter CA certificate file (.pem format). |
+| `VSPHERE_USER` | The username for connecting to vCenter. |
+| `VSPHERE_PASSWORD` | The password for the vCenter user. |
+| `VSPHERE_DATACENTER` | The name of the Datacenter object in the DR vCenter. |
+| `VSPHERE_CLUSTER` | The name of the Cluster object where nodes will be deployed. |
+| `VSPHERE_DATASTORE`| The name of the Datastore to use for VMs. |
+| `VSPHERE_NETWORK` | The name of the vSphere network (Port Group) for the VMs. |
+| `VSPHERE_FOLDER` | Full path to the VM Folder for organizing cluster VMs. |
+| `VSPHERE_RESOURCEPOOL`| Full path to the Resource Pool for the cluster. |
+| **External Services** | |
+| `BASTION_HOST` | FQDN of the DR bastion host (for reference). |
+| `GIT_SERVER` | FQDN of the internal Git server. |
+| `QUAY_SERVER` | FQDN of the internal Quay registry. |
+
+
+### Appendix B: Troubleshooting
+
+* **Installation Fails:** Check the log file `${OCP_INSTALL_DIR}/.openshift_install.log` for detailed error messages. Common issues are related to vCenter credentials, network connectivity (check firewalls and routing), or unavailable VIPs.
 * **Operator Fails to Install:** Use `oc get pods -n <namespace>` and `oc describe pod <pod-name> -n <namespace>` to investigate issues with specific operator pods. Check the operator's subscription status with `oc get csv -n <namespace>`.
-* **Connectivity Issues:** Use the `00_prerequisites-check.sh` script to re-validate connectivity to core services at any time.
+* **Connectivity Issues:** Use the `scripts/00_prerequisites-check.sh` script to re-validate connectivity to core services at any time.
+* **CRD Not Found:** If a script fails waiting for a CRD, it often means the operator that provides it failed to install correctly. Check the operator's namespace for failing pods.

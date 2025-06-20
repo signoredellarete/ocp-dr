@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#-----------------------------------------------------------------------
+# OpenShift Cluster Details
+#-----------------------------------------------------------------------
+export OCP_BASE_DOMAIN="example.com"
+export OCP_CLUSTER_NAME="ocp-cluster"
+export OCP_PULL_SECRET_PATH="/path/to/your/pull-secret.json"
+export OCP_SSH_KEY_PATH="/path/to/your/id_rsa.pub"
+export OCP_INSTALL_DIR="/home/kni/ocp_install_dir" # Directory to store installation files
+
+#-----------------------------------------------------------------------
+# OCP Sizing Details (Master Nodes)
+#-----------------------------------------------------------------------
+export OCP_MASTER_CPU=8
+export OCP_CORES_PER_SOCKET=4
+export OCP_MASTER_MEMORY=32768 # In MB (e.g., 32GB)
+export OCP_DISK_SIZE_GB=120
+
+#-----------------------------------------------------------------------
+# OCP Networking Details
+#-----------------------------------------------------------------------
+export OCP_API_VIP="192.168.1.10" # Static Virtual IP for the API
+export OCP_INGRESS_VIP="192.168.1.11" # Static Virtual IP for Ingress traffic
+export OCP_CLUSTER_NETWORK_CIDR="10.128.0.0/14"
+export OCP_MACHINE_NETWORK_CIDR="192.168.0.0/16" # Network where nodes are provisioned
+export OCP_SERVICE_NETWORK_CIDR="172.30.0.0/16"
+
+#-----------------------------------------------------------------------
+# vSphere DR Environment Details
+#-----------------------------------------------------------------------
+export VSPHERE_SERVER="dr-vcenter.example.com"
+export VSPHERE_USER="your-dr-user"
+export VSPHERE_PASSWORD='your-dr-password'
+export VSPHERE_DATACENTER="DR-Datacenter"
+export VSPHERE_CLUSTER="DR-Cluster"
+export VSPHERE_DATASTORE="DR-Datastore"
+export VSPHERE_NETWORK="DR-VM-Network" # Name of the Port Group for VMs
+
+export VSPHERE_CERT_PATH="/path/to/your/vcenter-ca.pem"
+
+#-----------------------------------------------------------------------
+# vSphere Topology Details
+#-----------------------------------------------------------------------
+# Path to the VM Folder where OCP VMs will be created
+export VSPHERE_FOLDER="/path/of/cluster/folder" #ex. "/${VSPHERE_DATACENTER}/vm/${OCP_CLUSTER_NAME}"
+# Full path to the vSphere Resource Pool
+export VSPHERE_RESOURCEPOOL="/path/of/vsphere-cluster/resolrcepool"
+
+#-----------------------------------------------------------------------
+# External Services Details (for logging and checks)
+#-----------------------------------------------------------------------
+export BASTION_HOST="dr-bastion.example.com"
+export GIT_SERVER="git.internal.example.com"
+export QUAY_SERVER="quay.internal.example.com"

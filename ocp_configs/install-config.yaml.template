@@ -1,0 +1,63 @@
+additionalTrustBundlePolicy: Proxyonly
+apiVersion: v1
+baseDomain: ${OCP_BASE_DOMAIN}
+compute:
+- architecture: amd64
+  hyperthreading: Enabled
+  name: worker
+  platform: {}
+  replicas: 0
+controlPlane:
+  architecture: amd64
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+  platform:
+    vsphere:
+    cpus: ${OCP_MASTER_CPU}
+    coresPerSocket: ${OCP_CORES_PER_SOCKET}
+    memoryMB: ${OCP_MASTER_MEMORY}
+    osDisk:
+      diskSizeGB: ${OCP_DISK_SIZE_GB}
+metadata:
+  creationTimestamp: null
+  name: ${OCP_CLUSTER_NAME}
+networking:
+  clusterNetwork:
+  - cidr: ${OCP_CLUSTER_NETWORK_CIDR}
+    hostPrefix: 23
+  machineNetwork:
+  - cidr: ${OCP_MACHINE_NETWORK_CIDR}
+  networkType: OVNKubernetes
+  serviceNetwork:
+  - ${OCP_SERVICE_NETWORK_CIDR}
+platform:
+  vsphere:
+    apiVIPs:
+    - ${OCP_API_VIP}
+    failureDomains:
+    - name: generated-failure-domain
+      region: generated-region
+      server: ${VSPHERE_SERVER}
+      topology:
+        folder: ${VSPHERE_FOLDER}
+        computeCluster: ${VSPHERE_CLUSTER}
+        datacenter: ${VSPHERE_DATACENTER}
+        datastore: ${VSPHERE_DATASTORE}
+        networks:
+        - ${VSPHERE_NETWORK}
+        resourcePool: ${VSPHERE_RESOURCEPOOL}
+      zone: generated-zone
+    ingressVIPs:
+    - ${OCP_INGRESS_VIP}
+    vcenters:
+    - datacenters:
+      - ${VSPHERE_DATACENTER}
+      password: ${VSPHERE_PASSWORD}
+      port: 443
+      server: ${VSPHERE_SERVER}
+      user: ${VSPHERE_USER}
+publish: External
+pullSecret: '${OCP_PULL_SECRET_CONTENT}'
+sshKey: |
+  ${OCP_SSH_KEY_CONTENT}
