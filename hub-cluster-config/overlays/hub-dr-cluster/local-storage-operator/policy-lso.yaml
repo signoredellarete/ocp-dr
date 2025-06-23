@@ -1,8 +1,13 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: policies
+---
 apiVersion: policy.open-cluster-management.io/v1
 kind: Policy
 metadata:
   name: policy-lso-operator
-  namespace: open-cluster-management
+  namespace: policies
   annotations:
     policy.open-cluster-management.io/standards: "NIST SP 800-53"
     policy.open-cluster-management.io/categories: "CM Configuration Management"
