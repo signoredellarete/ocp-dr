@@ -1,10 +1,60 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  annotations:
+    openshift.io/sa.scc.mcs: s0:c27,c4
+    openshift.io/sa.scc.supplemental-groups: 1000710000/10000
+    openshift.io/sa.scc.uid-range: 1000710000/10000
+  creationTimestamp: "2025-06-23T10:32:32Z"
+  labels:
+    kubernetes.io/metadata.name: ggithubcom-signoredellarete-ocp-dr-ns
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/audit-version: latest
+    pod-security.kubernetes.io/warn: restricted
+    pod-security.kubernetes.io/warn-version: latest
+  name: ggithubcom-signoredellarete-ocp-dr-ns
+  resourceVersion: "675759"
+  uid: 2ffc064c-1114-4cc4-8403-caa3be836b5e
+spec:
+  finalizers:
+  - kubernetes
+status:
+  phase: Active
+---
 apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
-  name: github-repo-channel
-  namespace: open-cluster-management
+  annotations:
+    apps.open-cluster-management.io/reconcile-rate: medium
+    open-cluster-management.io/user-group: c3lzdGVtOmNsdXN0ZXItYWRtaW5zLHN5c3RlbTphdXRoZW50aWNhdGVk
+    open-cluster-management.io/user-identity: a3ViZTphZG1pbg==
+  creationTimestamp: "2025-06-23T10:32:34Z"
+  generation: 1
+  name: ggithubcom-signoredellarete-ocp-dr
+  namespace: ggithubcom-signoredellarete-ocp-dr-ns
+  resourceVersion: "675774"
+  uid: d09acb9c-ed2c-4ad6-866d-428ab7b5125d
 spec:
-  type: Git
   pathname: https://github.com/signoredellarete/ocp-dr.git
   secretRef:
-    name: github-credentials
+    name: ggithubcom-signoredellarete-ocp-dr-auth
+  type: Git
+---
+apiVersion: v1
+data:
+  accessToken: Z2hwX1diUWU2SWtSOVl3aDByanl6RkhjN21qMkVBUzhFeTBSTkc4TQ==
+  user: c2lnbm9yZWRlbGxhcmV0ZQ==
+kind: Secret
+metadata:
+  annotations:
+    apps.open-cluster-management.io/serving-channel: ggithubcom-signoredellarete-ocp-dr-ns/ggithubcom-signoredellarete-ocp-dr
+  creationTimestamp: "2025-06-23T10:32:34Z"
+  labels:
+    apps.open-cluster-management.io/serving-channel: "true"
+    cluster.open-cluster-management.io/backup: app
+  name: ggithubcom-signoredellarete-ocp-dr-auth
+  namespace: ggithubcom-signoredellarete-ocp-dr-ns
+  resourceVersion: "675784"
+  uid: dcf2e0b3-548e-410e-99b1-0af9b839c21d
+type: Opaque
+
