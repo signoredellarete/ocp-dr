@@ -4,7 +4,7 @@ metadata:
   name: github-repo-channel
   namespace: open-cluster-management
 spec:
-  type: GitHub
+  type: Git
   pathname: https://github.com/signoredellarete/ocp-dr.git
   secretRef:
     name: github-credentials
