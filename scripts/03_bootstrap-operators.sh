@@ -15,11 +15,10 @@ wait_for_operator() { echo "Waiting for operator in ns $1..."; until oc get csv 
 # --- 1. Install Advanced Cluster Management (ACM) ---
 # ... (i passi da 00 a 03 per installare ACM rimangono invariati) ...
 echo -e "\n--- Installing Advanced Cluster Management (ACM) ---"
-oc apply -f ../dr-bootstrap/acm/00_namespace.yaml
-oc apply -f ../dr-bootstrap/acm/01_operatorgroup.yaml
-oc apply -f ../dr-bootstrap/acm/02_subscription.yaml
+oc apply -f ../dr-bootstrap/acm/01_acm.yaml
+
 wait_for_operator "open-cluster-management"
-oc apply -f ../dr-bootstrap/acm/03_multiclusterhub.yaml
+oc apply -f ../dr-bootstrap/acm/02_multiclusterhub.yaml
 echo "Waiting for MultiClusterHub to be available..."
 until oc get mch -n open-cluster-management multiclusterhub -o jsonpath='{.status.phase}' 2>/dev/null | grep -q "Running"; do sleep 20; echo -n "."; done
 echo " MultiClusterHub is running."
@@ -29,15 +28,13 @@ echo -e "\n--- Applying ACM Application to enable GitOps ---"
 
 # Create the binding to allow the placement rule to see clusters
 echo "[ACTION] Creating ManagedClusterSetBinding to grant permissions..."
-oc apply -f ../dr-bootstrap/acm/04_managedclustersetbinding.yaml
+oc apply -f ../dr-bootstrap/acm/03_managedclustersetbinding.yaml
 
 # Apply all manifests that define our GitOps Application
 echo "[ACTION] Applying ACM Application, Placement, Channel, and Subscription..."
-oc apply -f ../dr-bootstrap/acm/05_application.yaml
-oc apply -f ../dr-bootstrap/acm/06_placement.yaml
-# --- RIGHE MODIFICATE ---
-oc apply -f ../dr-bootstrap/acm/07_channel.yaml
-oc apply -f ../dr-bootstrap/acm/08_subscription.yaml
+oc apply -f ../dr-bootstrap/acm/04_placement.yaml
+oc apply -f ../dr-bootstrap/acm/05_channel.yaml
+oc apply -f ../dr-bootstrap/acm/06_app_operators-installation.yaml
 
 if [ $? -eq 0 ]; then
     echo "[SUCCESS] Hub Infrastructure Application bootstrapped."
