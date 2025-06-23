@@ -6,6 +6,6 @@ metadata:
 spec:
   channel: stable
   installPlanApproval: Automatic
-  name: openshift-local-storage
+  name: local-storage-operator
   source: redhat-operators
   sourceNamespace: openshift-marketplace
