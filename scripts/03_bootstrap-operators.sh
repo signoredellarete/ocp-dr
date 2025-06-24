@@ -26,15 +26,9 @@ echo " MultiClusterHub is running."
 # --- 2. Apply ACM Application and Permissions ---
 echo -e "\n--- Applying ACM Application to enable GitOps ---"
 
-# Create the binding to allow the placement rule to see clusters
-echo "[ACTION] Creating ManagedClusterSetBinding to grant permissions..."
-oc apply -f ../dr-bootstrap/acm/03_managedclustersetbinding.yaml
-
 # Apply all manifests that define our GitOps Application
 echo "[ACTION] Applying ACM Application, Placement, Channel, and Subscription..."
-oc apply -f ../dr-bootstrap/acm/04_placement.yaml
-oc apply -f ../dr-bootstrap/acm/05_channel.yaml
-oc apply -f ../dr-bootstrap/acm/06_app_operators-installation.yaml
+oc apply -f ../dr-bootstrap/acm/04_app_hub-infra-operators.yaml
 
 if [ $? -eq 0 ]; then
     echo "[SUCCESS] Hub Infrastructure Application bootstrapped."
