@@ -1,3 +1,4 @@
 ocp_configs/dr.vars
 ocp_configs/install-config.yaml
 ocp_configs/pull-secret.json
+ocp_configs/github-pat

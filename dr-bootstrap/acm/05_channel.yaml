@@ -1,3 +1,4 @@
+---
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -7,28 +8,20 @@ apiVersion: apps.open-cluster-management.io/v1
 kind: Channel
 metadata:
   annotations:
-    apps.open-cluster-management.io/reconcile-rate: medium
-    open-cluster-management.io/user-group: c3lzdGVtOmNsdXN0ZXItYWRtaW5zLHN5c3RlbTphdXRoZW50aWNhdGVk
-    open-cluster-management.io/user-identity: a3ViZTphZG1pbg==
+    apps.open-cluster-management.io/reconcile-rate: high
   name: ggithubcom-signoredellarete-ocp-dr
   namespace: ggithubcom-signoredellarete-ocp-dr-ns
 spec:
-  pathname: https://github.com/signoredellarete/ocp-dr.git
+  type: Git
+  pathname: 'https://github.com/signoredellarete/ocp-dr'
   secretRef:
     name: ggithubcom-signoredellarete-ocp-dr-auth
-  type: Git
 ---
 apiVersion: v1
-data:
-  accessToken: Z2hwX1diUWU2SWtSOVl3aDByanl6RkhjN21qMkVBUzhFeTBSTkc4TQ==
-  user: c2lnbm9yZWRlbGxhcmV0ZQ==
 kind: Secret
 metadata:
-  annotations:
-    apps.open-cluster-management.io/serving-channel: ggithubcom-signoredellarete-ocp-dr-ns/ggithubcom-signoredellarete-ocp-dr
-  labels:
-    apps.open-cluster-management.io/serving-channel: "true"
-    cluster.open-cluster-management.io/backup: app
   name: ggithubcom-signoredellarete-ocp-dr-auth
   namespace: ggithubcom-signoredellarete-ocp-dr-ns
-type: Opaque
+data:
+  user: c2lnbm9yZWRlbGxhcmV0ZQ==
+  accessToken: Z2hwX1NTM0F6Ung0VWRkSTVTTnFCdUNJYlNrUTVkbXFmYjRDelRucg==
