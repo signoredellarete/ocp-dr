@@ -40,7 +40,7 @@ metadata:
   namespace: ggithubcom-signoredellarete-ocp-dr-ns
 data:
   user: c2lnbm9yZWRlbGxhcmV0ZQ==
-  accessToken: Z2hwXzBNOVJkdklSenRNVlpCQWVIR3JoNmp6MWJQNDdlaDEwZmVRaw==
+  accessToken: Z2hwX3FxZDY3YXE0ZjU0V1VrelNDbkVNMEdPM0xsbUtNcTI1dzQzbA==
 ---
 apiVersion: apps.open-cluster-management.io/v1
 kind: Subscription
