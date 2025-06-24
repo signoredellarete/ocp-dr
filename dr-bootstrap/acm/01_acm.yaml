@@ -9,42 +9,18 @@ kind: ClusterRole
 metadata:
   name: open-cluster-management:subscription-admin
 rules:
-- apiGroups:
-  - app.k8s.io
-  resources:
-  - applications
-  verbs:
-  - '*'
-- apiGroups:
-  - apps.open-cluster-management.io
-  resources:
-  - '*'
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
-  - configmaps
-  - secrets
-  - namespaces
-  verbs:
-  - '*'
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: open-cluster-management:subscription-admin
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: open-cluster-management:subscription-admin
-subjects:
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: kube:admin
-- apiGroup: rbac.authorization.k8s.io
-  kind: User
-  name: system:admin
+- apiGroups: ["app.k8s.io"]
+  resources: ["applications"]
+  verbs: ["*"]
+- apiGroups: ["apps.open-cluster-management.io"]
+  resources: ["*"]
+  verbs: ["*"]
+- apiGroups: [""]
+  resources: ["configmaps", "secrets", "namespaces"]
+  verbs: ["*"]
+- apiGroups: ["policy.open-cluster-management.io"]
+  resources: ["policies", "placementbindings"]
+  verbs: ["*"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
@@ -73,4 +49,15 @@ metadata:
 spec:
   targetNamespaces:
     - open-cluster-management
-
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: acm-operator-subscription
+  namespace: open-cluster-management
+spec:
+  source: redhat-operators
+  sourceNamespace: openshift-marketplace
+  name: advanced-cluster-management
+  channel: release-2.12
+  installPlanApproval: Automatic
