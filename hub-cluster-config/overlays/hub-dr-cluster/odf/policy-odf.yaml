@@ -1,0 +1,48 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: policy-odf
+  namespace: policies
+  annotations:
+    policy.open-cluster-management.io/categories: ""
+    policy.open-cluster-management.io/standards: ""
+    policy.open-cluster-management.io/controls: ""
+spec:
+  disabled: false
+  remediationAction: enforce
+  policy-templates:
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1beta1
+        kind: OperatorPolicy
+        metadata:
+          name: install-operator-1
+        spec:
+          remediationAction: enforce
+          severity: medium
+          complianceType: musthave
+          subscription:
+            name: odf-operator
+            namespace: openshift-storage
+            channel: stable-4.17
+            source: redhat-operators
+            sourceNamespace: openshift-marketplace
+          upgradeApproval: Automatic
+          versions:
+          operatorGroup:
+            name: default
+            targetNamespaces:
+              - openshift-storage
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: policy-odf-placement
+  namespace: policies
+placementRef:
+  name: hub-infra-operators-placement-1
+  apiGroup: cluster.open-cluster-management.io
+  kind: Placement
+subjects:
+  - name: policy-odf
+    apiGroup: policy.open-cluster-management.io
+    kind: Policy

@@ -55,14 +55,12 @@ roleRef:
   kind: ClusterRole
   name: open-cluster-management:subscription-admin
 subjects:
-# Soggetti Utente che avevi già
 - apiGroup: rbac.authorization.k8s.io
   kind: User
   name: kube:admin
 - apiGroup: rbac.authorization.k8s.io
   kind: User
   name: system:admin
-# Soggetto ServiceAccount che stiamo aggiungendo
 - kind: ServiceAccount
   name: multicluster-operators
   namespace: open-cluster-management
