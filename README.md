@@ -12,6 +12,7 @@ This repository contains the automation scripts and configuration files for a ro
 | **Last Updated:** | June 26, 2025 |
 | **Owner:** | OpenShift Platform Team |
 | **Scope:** | Recovery of the OpenShift Cluster **infrastructure layer** in the DR site. |
+| **Author:** | [Fabrizio Verde](faverde@redhat.com) |
 
 ---
 
