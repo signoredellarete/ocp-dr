@@ -1,0 +1,50 @@
+apiVersion: machine.openshift.io/v1beta1
+kind: MachineSet
+metadata:
+  labels:
+    machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
+  name: ${CLUSTER_ID}-infra
+  namespace: openshift-machine-api
+spec:
+  replicas: ${OCP_INFRA_NODE_REPLICAS}
+  selector:
+    matchLabels:
+      machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
+      machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-infra
+  template:
+    metadata:
+      labels:
+        machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
+        machine.openshift.io/cluster-api-machine-role: worker # Based on worker profile
+        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-infra
+        # Specific label for the infra role
+        node-role.kubernetes.io/infra: ""
+    spec:
+      metadata: {} # This empty metadata block is required
+      # Taint to ensure only infra workloads are scheduled here
+      taints:
+        - effect: NoSchedule
+          key: node-role.kubernetes.io/infra
+      providerSpec:
+        value:
+          apiVersion: machine.openshift.io/v1beta1
+          kind: VSphereMachineProviderSpec
+          credentialsSecret:
+            name: vsphere-cloud-credentials
+          diskGiB: ${OCP_INFRA_NODE_DISK_GB}
+          memoryMiB: ${OCP_INFRA_NODE_MEMORY}
+          numCPUs: ${OCP_INFRA_NODE_CPU}
+          numCoresPerSocket: 1
+          template: ${OCP_VSPHERE_VM_TEMPLATE}
+          userDataSecret:
+            name: worker-user-data
+          network:
+            devices:
+            - networkName: ${VSPHERE_NETWORK}
+          workspace:
+            datacenter: ${VSPHERE_DATACENTER}
+            datastore: ${VSPHERE_DATASTORE}
+            folder: ${VSPHERE_FOLDER}
+            resourcePool: ${VSPHERE_RESOURCEPOOL}
+            server: ${VSPHERE_SERVER}

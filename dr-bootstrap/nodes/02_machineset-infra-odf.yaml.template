@@ -3,42 +3,46 @@ kind: MachineSet
 metadata:
   labels:
     machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
-  name: ${CLUSTER_ID}-${MACHINE_ROLE}
+  name: ${CLUSTER_ID}-infra-odf
   namespace: openshift-machine-api
 spec:
-  replicas: ${REPLICAS}
+  replicas: ${OCP_INFRA_ODF_NODE_REPLICAS}
   selector:
     matchLabels:
       machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
-      machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-${MACHINE_ROLE}
+      machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-infra-odf
   template:
     metadata:
       labels:
         machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
-        machine.openshift.io/cluster-api-machine-role: ${MACHINE_ROLE}
+        machine.openshift.io/cluster-api-machine-role: worker # Based on worker profile
         machine.openshift.io/cluster-api-machine-type: worker
-        machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-${MACHINE_ROLE}
-        ${NODE_LABEL_KEY}: "${NODE_LABEL_VALUE}"
+        machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-infra-odf
+        # Specific labels for the ODF role
+        node-role.kubernetes.io/infra-odf: ""
+        cluster.ocs.openshift.io/openshift-storage: ""
     spec:
+      metadata: {}
+      # Taint to ensure only ODF components are scheduled here
+      taints:
+        - key: node.ocs.openshift.io/storage
+          effect: NoSchedule
       providerSpec:
         value:
           apiVersion: machine.openshift.io/v1beta1
           kind: VSphereMachineProviderSpec
           credentialsSecret:
             name: vsphere-cloud-credentials
-          diskGiB: ${DISK_GIB}
-          memoryMiB: ${MEMORY_MIB}
-          numCPUs: ${NUM_CPUS}
+          diskGiB: ${OCP_INFRA_ODF_NODE_DISK_GB}
+          memoryMiB: ${OCP_INFRA_ODF_NODE_MEMORY}
+          numCPUs: ${OCP_INFRA_ODF_NODE_CPU}
           numCoresPerSocket: 1
-          # --- SEZIONE AGGIUNTA ---
-          network:
-            devices:
-            - networkName: ${VSPHERE_NETWORK}
-          # --- FINE SEZIONE AGGIUNTA ---
-          snapshot: ""
           template: ${OCP_VSPHERE_VM_TEMPLATE}
           userDataSecret:
             name: worker-user-data
+          network:
+            devices:
+            - networkName: ${VSPHERE_NETWORK}
           workspace:
             datacenter: ${VSPHERE_DATACENTER}
             datastore: ${VSPHERE_DATASTORE}
