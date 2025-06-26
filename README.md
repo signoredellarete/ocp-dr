@@ -1,135 +1,116 @@
 # ocp-dr
 
-# DR Runbook: OpenShift Cluster Infrastructure Recovery
+# OpenShift Disaster Recovery Automation
+
+This repository contains the automation scripts and configuration files for a robust, on-demand Disaster Recovery (DR) procedure for an OpenShift 4.17 cluster.
+
+## DR Runbook: OpenShift Cluster Infrastructure Recovery
 
 | | |
 |---|---|
-| **Document Version:** | 1.0 |
-| **Last Updated:** | June 19, 2025 |
+| **Document Version:** | 2.0 |
+| **Last Updated:** | June 26, 2025 |
 | **Owner:** | OpenShift Platform Team |
 | **Scope:** | Recovery of the OpenShift Cluster **infrastructure layer** in the DR site. |
 
 ---
 
-## 1. Introduction and Scope
+### 1. Introduction and Scope
 
-This document provides the step-by-step procedure for recreating the OpenShift cluster infrastructure in the designated Disaster Recovery (DR) site. The procedure relies on pre-configured automation scripts and a "cold site" approach, where the cluster is created on-demand.
+This document provides the step-by-step procedure for recreating the OpenShift cluster infrastructure in a designated DR site. The procedure utilizes a "cold site" approach, where the cluster and its nodes are provisioned on-demand using automation scripts.
 
-### 1.1. In Scope
+The recovery is divided into distinct, sequential phases, from base cluster creation to node provisioning and finally to configuration via GitOps with Red Hat Advanced Cluster Management (ACM).
+
+#### 1.1. In Scope
 * Validating the DR environment prerequisites.
-* Creating a new OpenShift 4.17 cluster using `openshift-install`.
-* Bootstrapping the cluster with core infrastructure operators: Local Storage Operator (LSO), Advanced Cluster Management (ACM).
-* Handing off control to ACM to complete the installation of other infrastructure operators (ODF, GitOps, SSO).
+* Creating a new OpenShift 4.17 cluster (master nodes only).
+* **Provisioning worker, infra, and infra-odf node pools using MachineSets.**
+* Applying standard configurations (taints, labels) to the new nodes.
+* Bootstrapping the cluster with ACM and connecting it to this Git repository.
+* Handing off control to ACM to complete the installation of all other infrastructure operators (LSO, ODF, etc.) via GitOps policies.
 * Validating the health of the recovered cluster infrastructure.
 
-### 1.2. Out of Scope
+#### 1.2. Out of Scope
 * **Recovery of the DR vSphere environment.**
-* **Restoration of core VMs** (Bastion, Git Server, Quay Registry) via Kasten. This is handled by the **Systems Team**.
+* **Restoration of core VMs** (Bastion, Git Server, Quay Registry). This is handled by the **Systems Team**.
 * **Configuration of DR networking and DNS.** This is handled by the **Network Team**.
 * **Recovery of applications.** This is handled by the **Application Team** via OpenShift GitOps after the infrastructure is declared ready.
 
 ---
 
-## 2. Prerequisites Checklist
+### 2. Recovery Procedure
 
-Before starting this procedure, ensure **every single one** of the following conditions is met:
+Execute these phases sequentially from the restored Bastion Host.
 
-- [ ] A disaster has been formally declared, and the decision to failover has been made.
-- [ ] **Confirmation Received:** The **Systems Team** has confirmed that the Bastion, Git, and Quay VMs have been successfully restored by Kasten, powered on, and have network connectivity.
-- [ ] **Confirmation Received:** The **Network Team** has confirmed that all required DR networking, firewall rules, and DNS configurations are active and in place.
-- [ ] **Access:** You have SSH access to the restored Bastion Host (`dr-bastion.example.com`).
-- [ ] **Permissions:** The user on the Bastion Host has **`sudo` privileges** to manage system-wide certificate trust stores.
-- [ ] **Git Repository:** The infrastructure Git repository has been cloned to the Bastion Host (e.g., in `/home/kni/infra-repo`).
-- [ ] **Configuration:** All variables in the `ocp_configs/dr.vars` file have been reviewed and populated, including the new `VSPHERE_CERT_PATH`.
+#### **Phase 1: Preparation and Prerequisites**
 
-**DO NOT PROCEED UNLESS ALL PREREQUISITES ARE MET.**
+Before starting, ensure **every single one** of the following conditions is met:
 
----
+-   [ ] A disaster has been formally declared and the decision to failover has been made.
+-   [ ] **Confirmation Received:** The **Systems Team** has confirmed that the Bastion, Git, and Quay VMs have been successfully restored, powered on, and have network connectivity.
+-   [ ] **Confirmation Received:** The **Network Team** has confirmed that all required DR networking, firewall rules, and DNS are active.
+-   [ ] **Access:** You have SSH access to the restored Bastion Host.
+-   [ ] **Git Repository:** This Git repository has been cloned to the Bastion Host.
+-   [ ] **Configuration:** All variables in the `ocp_configs/dr.vars` file have been reviewed and populated with the correct values for the DR environment, including the new node sizing and replica counts.
 
-## 3. Recovery Procedure
+#### **Phase 2: Base Cluster Provisioning**
 
-Execute these steps sequentially from the Bastion Host's command line.
+This phase creates the minimal OpenShift cluster (master nodes only).
 
-### **Phase 1: DR Procedure Activation**
-
-1.  **SSH into the Bastion Host:**
-    ```bash
-    ssh your-user@${BASTION_HOST}
-    ```
-2.  **Navigate to the scripts directory** within your cloned Git repository:
+1.  **Navigate to the scripts directory:**
     ```bash
     cd /path/to/your/cloned/repo/scripts
     ```
-
-### **Phase 2: OpenShift Cluster Provisioning**
-
-1.  **Run the Prerequisite Check Script:** This script validates that the environment is ready for the installation.
+2.  **Run the Prerequisite Check Script:**
     ```bash
     ./00_prerequisites-check.sh
     ```
-    **Expected Output:** The script should end with the message: `--- Prerequisites Check Completed Successfully! ---`
-    *If it fails, do not proceed. Work with the appropriate teams to resolve the issues reported by the script.*
+    *This script validates connectivity, DNS, and tools on the bastion.*
 
-2.  **Generate the `install-config.yaml`:** This script creates the final installation configuration file.
+3.  **Generate the `install-config.yaml`:**
     ```bash
     ./01_generate-install-config.sh
     ```
-    **Expected Output:** The script should end with the message: `Successfully generated /path/to/ocp_install_dir/install-config.yaml.`
+    *This script creates the configuration file and a pre-installation backup.*
 
-3.  **Create the OpenShift Cluster:** This is the main installation step and will take a considerable amount of time (typically 60-90 minutes).
+4.  **Create the OpenShift Cluster (Masters Only):**
     ```bash
     ./02_create-cluster.sh
     ```
-    **Expected Output:** The script will stream the `openshift-install` log. A successful run will end with: `--- Cluster Creation Completed Successfully! ---`
+    *This is the main installation step and will take a considerable amount of time.*
 
-### **Phase 3: Infrastructure Configuration Bootstrap**
+#### **Phase 3: Worker and Infra Node Provisioning**
 
-1.  **Bootstrap Core Operators:** This script installs LSO and ACM, then lets ACM take over.
+With the control plane active, this phase provisions the required node pools.
+
+1.  **Create All Node Pools:**
     ```bash
-    ./03_bootstrap-operators.sh
+    ./03_create-nodes.sh
     ```
-    **Expected Output:** The script will complete after initiating the ACM installation, ending with: `--- Operator Bootstrap Script Finished ---`
+    * **What it does:** This script reads variables from `dr.vars` to:
+        * Create three `MachineSet` objects: `worker`, `infra`, and `infra-odf`.
+        * The `infra-odf` nodes are automatically labeled (`cluster.ocs.openshift.io/openshift-storage`) to be ready for ODF.
+        * A `MachineConfig` is applied to taint all `infra` nodes, ensuring only designated workloads can run on them.
+    * **Wait for completion:** The script will wait until all requested nodes have been provisioned by vSphere and have joined the cluster in a `Ready` state. This can take a long time.
 
-2.  **Monitor ACM and ODF Installation:** The script finishes quickly, but ACM and ODF take a long time to deploy in the background. Monitor their progress using the following commands:
+#### **Phase 4: ACM Bootstrap and GitOps Configuration**
 
-    * **Set Kubeconfig:**
-        ```bash
-        source ../ocp_configs/dr.vars
-        export KUBECONFIG=${OCP_INSTALL_DIR}/auth/kubeconfig
-        ```
+Now that the cluster has its nodes, we can bootstrap ACM and hand over control.
 
-    * **Monitor ACM:** Wait for all pods to be `Running` or `Completed`.
-        ```bash
-        oc get pods -n open-cluster-management -w
-        ```
-
-    * **Monitor ODF:** Once ACM is running, it will create the `openshift-storage` namespace and start ODF. Watch for all pods to become `Running` or `Completed`.
-        ```bash
-        # Wait for the namespace to be created by ACM
-        oc get pods -n openshift-storage -w
-        ```
-    This phase is complete when the `StorageCluster` is `Ready`. Check with: `oc get storagecluster -n openshift-storage`
-
-### **Phase 4: Validation and Handoff**
-
-1.  **Run the Final Validation Script:** Once all operators appear to be running, execute the full validation script to confirm the cluster's health.
+1.  **Bootstrap ACM and Connect to Git:**
     ```bash
-    ./04_validate-dr-cluster.sh
+    ./04_bootstrap-acm.sh
     ```
-    **Expected Output:** A successful validation will end with the message: `[ SUCCESS ] The OpenShift DR cluster infrastructure appears to be healthy and ready.`
+    * **What it does:** This script installs the ACM operator, creates the `MultiClusterHub`, and applies the initial `Application` resource. This `Application` points ACM to the `hub-cluster-config/` directory in this Git repository, activating the GitOps workflow.
+2.  **Monitor GitOps Synchronization:** From this point on, ACM is in control. Monitor its progress from the OpenShift console in the "Applications" and "Governance" sections. ACM will now read your Kustomize overlays and begin deploying the policies for LSO, ODF, and other operators.
 
-2.  **Handoff to Application Team:** Once validation is successful, formally notify the application team that the infrastructure is ready for them to begin their application recovery procedures.
+#### **Phase 5: Validation and Handoff**
 
-    **Communication Template:**
-    > **Subject:** [DR] OpenShift Infrastructure Ready for Application Recovery
-    >
-    > **To:** Application Team Leads
-    >
-    > The OpenShift DR cluster infrastructure has been successfully recovered and validated.
-    >
-    > **Cluster Console:** `https://console-openshift-console.apps.ocp-cluster.example.com`
-    >
-    > You may now begin your application recovery procedures using OpenShift GitOps. The platform team is on standby for support.
+1.  **Run the Final Validation Script:** Once ACM reports that all applications and policies are compliant, run the validation script to confirm the overall health.
+    ```bash
+    ./05_validate-dr-cluster.sh
+    ```
+2.  **Handoff to Application Team:** Formally notify the application team that the infrastructure is ready for them to begin their own application recovery procedures.
 
 ---
 
@@ -173,6 +154,20 @@ This section lists all variables defined in the `ocp_configs/dr.vars` file. Ensu
 | `BASTION_HOST` | FQDN of the DR bastion host (for reference). |
 | `GIT_SERVER` | FQDN of the internal Git server. |
 | `QUAY_SERVER` | FQDN of the internal Quay registry. |
+| **Node Sizing & Replicas** | |
+| `OCP_VSPHERE_VM_TEMPLATE` | Name of the vSphere VM template for creating nodes (e.g., `cluster-id-rhcos`). |
+| `OCP_WORKER_NODE_REPLICAS` | Number of worker nodes to create. |
+| `OCP_WORKER_NODE_CPU` | Number of vCPUs for each worker node. |
+| `OCP_WORKER_NODE_MEMORY` | Memory in MB for each worker node. |
+| `OCP_WORKER_NODE_DISK_GB` | Disk size in GB for each worker node. |
+| `OCP_INFRA_NODE_REPLICAS` | Number of infra nodes to create. |
+| `OCP_INFRA_NODE_CPU` | Number of vCPUs for each infra node. |
+| `OCP_INFRA_NODE_MEMORY` | Memory in MB for each infra node. |
+| `OCP_INFRA_NODE_DISK_GB` | Disk size in GB for each infra node. |
+| `OCP_INFRA_ODF_NODE_REPLICAS` | Number of ODF-dedicated nodes to create. |
+| `OCP_INFRA_ODF_NODE_CPU` | Number of vCPUs for each ODF node. |
+| `OCP_INFRA_ODF_NODE_MEMORY` | Memory in MB for each ODF node. |
+| `OCP_INFRA_ODF_NODE_DISK_GB` | Disk size in GB for each ODF node. |
 
 
 ### Appendix B: Troubleshooting

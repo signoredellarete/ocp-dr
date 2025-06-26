@@ -54,3 +54,29 @@ export VSPHERE_RESOURCEPOOL="/path/of/vsphere-cluster/resolrcepool"
 export BASTION_HOST="dr-bastion.example.com"
 export GIT_SERVER="git.internal.example.com"
 export QUAY_SERVER="quay.internal.example.com"
+
+
+#-----------------------------------------------------------------------
+# Node Sizing and Replica Details
+#-----------------------------------------------------------------------
+# Note: The vSphere VM template name must be the one created by the installer
+# It typically looks like: your-cluster-id-rhcos-ova
+export OCP_VSPHERE_VM_TEMPLATE="your-cluster-id-rhcos" # Adjust this to match your environment
+
+# Worker Nodes
+export OCP_WORKER_NODE_REPLICAS=3
+export OCP_WORKER_NODE_CPU=4
+export OCP_WORKER_NODE_MEMORY=16384 # in MB
+export OCP_WORKER_NODE_DISK_GB=120
+
+# Infra Nodes (for routers, registry, etc.)
+export OCP_INFRA_NODE_REPLICAS=2
+export OCP_INFRA_NODE_CPU=4
+export OCP_INFRA_NODE_MEMORY=16384 # in MB
+export OCP_INFRA_NODE_DISK_GB=120
+
+# Infra-ODF Nodes (dedicated for OpenShift Data Foundation)
+export OCP_INFRA_ODF_NODE_REPLICAS=3
+export OCP_INFRA_ODF_NODE_CPU=16
+export OCP_INFRA_ODF_NODE_MEMORY=65536 # in MB (ODF is memory intensive)
+export OCP_INFRA_ODF_NODE_DISK_GB=256
