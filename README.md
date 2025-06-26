@@ -148,56 +148,62 @@ Now that the cluster has its nodes, we can bootstrap ACM and hand over control.
 
 ### Appendix A: Placeholder Variables
 
-This section lists all variables defined in the `ocp_configs/dr.vars` file. Ensure all these are correctly populated before starting the procedure.
+This section lists all variables defined in the `ocp_configs/dr.vars` file. To prepare for the DR procedure, you must copy `ocp_configs/dr.vars.template` to `ocp_configs/dr.vars` and populate it with the correct values for your environment.
 
-| Variable Name | Description |
-|---|---|
-| **Cluster Details** | |
-| `OCP_CLUSTER_NAME` | The name of the OpenShift cluster. |
-| `OCP_BASE_DOMAIN` | The base domain for the cluster (e.g., example.com). |
-| `OCP_PULL_SECRET_PATH` | Absolute path to the file containing your Red Hat pull secret JSON. |
-| `OCP_SSH_KEY_PATH` | Absolute path to the public SSH key file for node access. |
-| `OCP_INSTALL_DIR` | A local directory on the bastion to store installation artifacts. |
-| **Sizing Details** | |
-| `OCP_MASTER_CPU` | Number of vCPUs for each master node. |
-| `OCP_CORES_PER_SOCKET` | Number of cores per socket for master nodes. |
-| `OCP_MASTER_MEMORY`| Memory in MB for each master node (e.g., 32768 for 32GB). |
-| `OCP_DISK_SIZE_GB` | Size of the OS disk in GB for master nodes. |
-| **Networking Details**| |
-| `OCP_API_VIP` | The static virtual IP for the cluster's API endpoint. Must be free. |
-| `OCP_INGRESS_VIP` | The static virtual IP for user-facing application traffic. Must be free. |
-| `OCP_CLUSTER_NETWORK_CIDR`| The IP address block for Pods (internal to the cluster). |
-| `OCP_MACHINE_NETWORK_CIDR`| The IP address block where the cluster nodes (VMs) will be created. |
-| `OCP_SERVICE_NETWORK_CIDR`| The IP address block for Services (internal to the cluster). |
-| **vSphere Details** | |
-| `VSPHERE_SERVER` | FQDN or IP address of the DR vCenter Server. |
-| `VSPHERE_CERT_PATH` | **(New)** Absolute path to the vCenter CA certificate file (.pem format). |
-| `VSPHERE_USER` | The username for connecting to vCenter. |
-| `VSPHERE_PASSWORD` | The password for the vCenter user. |
-| `VSPHERE_DATACENTER` | The name of the Datacenter object in the DR vCenter. |
-| `VSPHERE_CLUSTER` | The name of the Cluster object where nodes will be deployed. |
-| `VSPHERE_DATASTORE`| The name of the Datastore to use for VMs. |
-| `VSPHERE_NETWORK` | The name of the vSphere network (Port Group) for the VMs. |
-| `VSPHERE_FOLDER` | Full path to the VM Folder for organizing cluster VMs. |
-| `VSPHERE_RESOURCEPOOL`| Full path to the Resource Pool for the cluster. |
-| **External Services** | |
-| `BASTION_HOST` | FQDN of the DR bastion host (for reference). |
-| `GIT_SERVER` | FQDN of the internal Git server. |
-| `QUAY_SERVER` | FQDN of the internal Quay registry. |
-| **Node Sizing & Replicas** | |
-| `OCP_VSPHERE_VM_TEMPLATE` | Name of the vSphere VM template for creating nodes (e.g., `cluster-id-rhcos`). |
-| `OCP_WORKER_NODE_REPLICAS` | Number of worker nodes to create. |
-| `OCP_WORKER_NODE_CPU` | Number of vCPUs for each worker node. |
-| `OCP_WORKER_NODE_MEMORY` | Memory in MB for each worker node. |
-| `OCP_WORKER_NODE_DISK_GB` | Disk size in GB for each worker node. |
-| `OCP_INFRA_NODE_REPLICAS` | Number of infra nodes to create. |
-| `OCP_INFRA_NODE_CPU` | Number of vCPUs for each infra node. |
-| `OCP_INFRA_NODE_MEMORY` | Memory in MB for each infra node. |
-| `OCP_INFRA_NODE_DISK_GB` | Disk size in GB for each infra node. |
-| `OCP_INFRA_ODF_NODE_REPLICAS` | Number of ODF-dedicated nodes to create. |
-| `OCP_INFRA_ODF_NODE_CPU` | Number of vCPUs for each ODF node. |
-| `OCP_INFRA_ODF_NODE_MEMORY` | Memory in MB for each ODF node. |
-| `OCP_INFRA_ODF_NODE_DISK_GB` | Disk size in GB for each ODF node. |
+| Variable Name                        | Description                                                                                             |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------- |
+| **OpenShift Cluster Details** |                                                                                                         |
+| `OCP_BASE_DOMAIN`                    | The base domain for the cluster (e.g., example.com).                                                    |
+| `OCP_CLUSTER_NAME`                   | The name of the OpenShift cluster.                                                                      |
+| `OCP_PULL_SECRET_PATH`               | Absolute path to the file containing your Red Hat pull secret JSON.                                     |
+| `OCP_SSH_KEY_PATH`                   | Absolute path to the public SSH key file for node access.                                               |
+| `OCP_INSTALL_DIR`                    | A local directory on the bastion to store installation artifacts.                                       |
+| `OCP_INSTALL_DIR_BACKUP`             | Absolute path to the directory where pre-installation backups will be stored.                           |
+| **OCP Sizing Details (Masters)** |                                                                                                         |
+| `OCP_MASTER_CPU`                     | Number of vCPUs for each master node.                                                                   |
+| `OCP_CORES_PER_SOCKET`               | Number of cores per socket for master nodes.                                                            |
+| `OCP_MASTER_MEMORY`                  | Memory in MB for each master node (e.g., 32768 for 32GB).                                               |
+| `OCP_DISK_SIZE_GB`                   | Size of the OS disk in GB for master nodes.                                                             |
+| **OCP Networking Details** |                                                                                                         |
+| `OCP_API_VIP`                        | The static Virtual IP for the cluster's API endpoint. Must be free.                                     |
+| `OCP_INGRESS_VIP`                    | The static Virtual IP for user-facing application traffic. Must be free.                                |
+| `OCP_CLUSTER_NETWORK_CIDR`           | The IP address block for Pods (internal to the cluster).                                                |
+| `OCP_MACHINE_NETWORK_CIDR`           | The IP address block where the cluster nodes (VMs) will be provisioned.                                 |
+| `OCP_SERVICE_NETWORK_CIDR`           | The IP address block for Services (internal to the cluster).                                            |
+| **vSphere DR Environment Details** |                                                                                                         |
+| `VSPHERE_SERVER`                     | FQDN or IP address of the DR vCenter Server.                                                            |
+| `VSPHERE_USER`                       | The username for connecting to vCenter.                                                                 |
+| `VSPHERE_PASSWORD`                   | The password for the vCenter user.                                                                      |
+| `VSPHERE_DATACENTER`                 | The name of the Datacenter object in the DR vCenter.                                                    |
+| `VSPHERE_CLUSTER`                    | The name of the Cluster object where nodes will be deployed.                                            |
+| `VSPHERE_DATASTORE`                  | The name of the Datastore to use for VMs.                                                               |
+| `VSPHERE_NETWORK`                    | The name of the vSphere network (Port Group) for the VMs.                                               |
+| `VSPHERE_CERT_PATH`                  | Absolute path to the vCenter CA certificate file (.pem format).                                         |
+| **vSphere Topology Details** |                                                                                                         |
+| `VSPHERE_FOLDER`                     | Full path to the VM Folder where OCP VMs will be created (e.g., `"/DR_Datacenter/vm/My_OCP_Cluster"`).  |
+| `VSPHERE_RESOURCEPOOL`               | Full path to the vSphere Resource Pool (e.g., `"/DR_Datacenter/host/DR_Cluster/Resources"`).            |
+| **External Services Details** |                                                                                                         |
+| `BASTION_HOST`                       | FQDN of the DR bastion host (for reference).                                                            |
+| `GIT_SERVER`                         | FQDN of the Git server for connectivity checks (e.g., `github.com`).                                     |
+| `QUAY_SERVER`                        | FQDN of the Quay registry for connectivity checks.                                                      |
+| **Node Sizing & Replicas** |                                                                                                         |
+| `OCP_VSPHERE_VM_TEMPLATE`            | (Optional) Name of the vSphere VM template for nodes. If left empty, the script will detect it automatically. |
+| `OCP_WORKER_NODE_REPLICAS`           | Number of worker nodes to create.                                                                       |
+| `OCP_WORKER_NODE_CPU`                | Number of vCPUs for each worker node.                                                                   |
+| `OCP_WORKER_NODE_MEMORY`             | Memory in MB for each worker node.                                                                      |
+| `OCP_WORKER_NODE_DISK_GB`            | Disk size in GB for each worker node.                                                                   |
+| `OCP_INFRA_NODE_REPLICAS`            | Number of infra nodes to create.                                                                        |
+| `OCP_INFRA_NODE_CPU`                 | Number of vCPUs for each infra node.                                                                    |
+| `OCP_INFRA_NODE_MEMORY`              | Memory in MB for each infra node.                                                                       |
+| `OCP_INFRA_NODE_DISK_GB`             | Disk size in GB for each infra node.                                                                    |
+| `OCP_INFRA_ODF_NODE_REPLICAS`        | Number of ODF-dedicated nodes to create.                                                                |
+| `OCP_INFRA_ODF_NODE_CPU`             | Number of vCPUs for each ODF node.                                                                      |
+| `OCP_INFRA_ODF_NODE_MEMORY`          | Memory in MB for each ODF node.                                                                         |
+| `OCP_INFRA_ODF_NODE_DISK_GB`         | Disk size in GB for each ODF node.                                                                      |
+| **ACM Git Channel Details** |                                                                                                         |
+| `ACM_GIT_CHANNEL_REPO_URL`           | The HTTPS URL of the Git repository for ACM to subscribe to.                                            |
+| `ACM_GIT_CHANNEL_USERNAME`           | The username for authenticating to the Git repository.                                                  |
+| `ACM_GIT_CHANNEL_ACCESS_TOKEN`       | The Personal Access Token (PAT) for authenticating to the Git repository.                               |
 
 
 ### Appendix B: Troubleshooting
