@@ -9,48 +9,67 @@ export KUBECONFIG=${OCP_INSTALL_DIR}/auth/kubeconfig
 
 echo "--- Starting Worker and Infra Node Provisioning ---"
 
-# --- Step 1: Gather Dynamic Information ---
+# --- Step 1: Gather Dynamically Generated Cluster Information ---
 echo "[INFO] Gathering information from the newly created cluster..."
 METADATA_FILE="${OCP_INSTALL_DIR}/metadata.json"
 if [ ! -f "$METADATA_FILE" ]; then
-    echo "[ERROR] Metadata file not found at $METADATA_FILE."
+    echo "[ERROR] Metadata file not found at $METADATA_FILE. Cannot proceed."
     exit 1
 fi
 export CLUSTER_ID=$(jq -r .infraID ${METADATA_FILE})
 echo "[INFO] Found Infrastructure ID (CLUSTER_ID): ${CLUSTER_ID}"
 
-DEFAULT_WORKER_MS_NAME=$(oc get machineset.machine.openshift.io -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[0].metadata.name}')
+# --- Step 2: Find the default worker MachineSet and its VM template ---
+echo "[INFO] Finding the default worker MachineSet to detect the vSphere template..."
+DEFAULT_WORKER_MS_NAME=$(oc get machineset.machine.openshift.io -n openshift-machine-api -o name | grep "${CLUSTER_ID}-worker" | sed 's|.*/||')
 if [ -z "$DEFAULT_WORKER_MS_NAME" ]; then
-    echo "[ERROR] Could not find the default worker MachineSet."
+    echo "[ERROR] Could not find the default worker MachineSet. This is unexpected after a successful IPI installation."
     exit 1
 fi
 echo "[INFO] Found default worker MachineSet: ${DEFAULT_WORKER_MS_NAME}"
-
 export OCP_VSPHERE_VM_TEMPLATE=$(oc get machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.template}')
-echo "[INFO] Using dynamically detected vSphere Template: ${OCP_VSPHERE_VM_TEMPLATE}"
+echo "[SUCCESS] Using dynamically detected vSphere Template: ${OCP_VSPHERE_VM_TEMPLATE}"
 
 
-# --- Step 2: Scale Existing Worker MachineSet ---
+# --- Step 3: Scale Existing Worker MachineSet ---
 echo "[ACTION] Scaling the existing worker MachineSet '${DEFAULT_WORKER_MS_NAME}' to ${OCP_WORKER_NODE_REPLICAS} replicas."
 oc scale machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api --replicas=${OCP_WORKER_NODE_REPLICAS}
 
 
-# --- Step 3: Create New Infra MachineSet ---
-echo "[ACTION] Creating MachineSet for 'infra' role..."
-envsubst < ../dr-bootstrap/nodes/01_machineset-infra.yaml.template | oc apply -f -
+# --- Step 4: Create New Infra and Infra-ODF MachineSets ---
+create_machineset() {
+    export MACHINE_ROLE=$1
+    export REPLICAS=$2
+    export NUM_CPUS=$3
+    export MEMORY_MIB=$4
+    export DISK_GIB=$5
+    export NODE_LABEL_KEY=${6}
+    export NODE_LABEL_VALUE=${7}
+
+    echo "[ACTION] Creating MachineSet for role: ${MACHINE_ROLE}"
+    envsubst < ../dr-bootstrap/nodes/01_machineset-infra.yaml.template | oc apply -f -
+}
+
+create_machineset "infra" ${OCP_INFRA_NODE_REPLICAS} ${OCP_INFRA_NODE_CPU} ${OCP_INFRA_NODE_MEMORY} ${OCP_INFRA_NODE_DISK_GB} "node-role.kubernetes.io/infra" ""
+create_machineset "infra-odf" ${OCP_INFRA_ODF_NODE_REPLICAS} ${OCP_INFRA_ODF_NODE_CPU} ${OCP_INFRA_ODF_NODE_MEMORY} ${OCP_INFRA_ODF_NODE_DISK_GB} "cluster.ocs.openshift.io/openshift-storage" ""
 
 
-# --- Step 4: Create New Infra-ODF MachineSet ---
-echo "[ACTION] Creating MachineSet for 'infra-odf' role..."
-envsubst < ../dr-bootstrap/nodes/02_machineset-infra-odf.yaml.template | oc apply -f -
+# --- Step 5: Apply Taints to Infra Nodes ---
+echo "[ACTION] Applying MachineConfig to taint 'infra' nodes."
+oc apply -f ../dr-bootstrap/nodes/02_machineconfig-infra-taint.yaml
 
 
-# --- Step 5: Wait for All Nodes to Become Ready ---
-echo "[INFO] Waiting for all nodes to be provisioned and become 'Ready'..."
+# --- Step 6: Wait for All Nodes to Become Ready ---
+echo "[INFO] Waiting for all worker, infra, and infra-odf nodes to be created and become 'Ready'..."
+echo "[INFO] This can take 15-30 minutes depending on the vSphere environment."
+
 TOTAL_NODES_EXPECTED=$((OCP_WORKER_NODE_REPLICAS + OCP_INFRA_NODE_REPLICAS + OCP_INFRA_ODF_NODE_REPLICAS))
 while true; do
-    READY_NODES=$(oc get nodes -l 'node-role.kubernetes.io/worker=' -o json | jq '[.items[] | select(.status.conditions[] | .type == "Ready" and .status == "True")] | length')
+    # --- MODIFIED --- Select nodes that are 'worker' but NOT 'master'
+    READY_NODES=$(oc get nodes -l 'node-role.kubernetes.io/worker=,node-role.kubernetes.io/master!=' -o json | jq '[.items[] | select(.status.conditions[] | .type == "Ready" and .status == "True")] | length')
+    
     echo "Current ready worker/infra nodes: ${READY_NODES:-0} / ${TOTAL_NODES_EXPECTED}"
+    
     if [[ "${READY_NODES:-0}" -ge "$TOTAL_NODES_EXPECTED" ]]; then
         echo "[SUCCESS] All ${TOTAL_NODES_EXPECTED} nodes are now in 'Ready' state."
         break
