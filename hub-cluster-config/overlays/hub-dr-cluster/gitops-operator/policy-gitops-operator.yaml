@@ -9,7 +9,7 @@ metadata:
     policy.open-cluster-management.io/controls: ""
 spec:
   disabled: false
-  remediationAction: enforce
+  remediationAction: inform
   policy-templates:
     - objectDefinition:
         apiVersion: policy.open-cluster-management.io/v1beta1
@@ -17,7 +17,7 @@ spec:
         metadata:
           name: policy-gitops-operator
         spec:
-          remediationAction: enforce
+          remediationAction: inform
           severity: medium
           complianceType: musthave
           subscription:
