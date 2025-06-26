@@ -67,7 +67,10 @@ This phase creates the minimal OpenShift cluster (master nodes only).
 
 1.  **Navigate to the scripts directory:**
     ```bash
-    cd /path/to/your/cloned/repo/scripts
+    cd /path/to/your/cloned/repo
+    ```
+    ```bash
+    cd scripts
     ```
 2.  **Run the Prerequisite Check Script:**
     ```bash
