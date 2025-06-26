@@ -43,6 +43,22 @@ The recovery is divided into distinct, sequential phases, from base cluster crea
 
 Execute these phases sequentially from the restored Bastion Host.
 
+### Important Note on Secrets and Untracked Files
+
+> **WARNING: Critical File Backup Required**
+>
+> This repository includes a `.gitignore` file to prevent sensitive data and large state directories from being accidentally committed to the Git history. Please be aware that the following critical files are **intentionally not tracked by Git**:
+>
+> * `ocp_configs/dr.vars`
+> * `ocp_configs/install-config.yaml`
+> * `ocp_configs/pull-secret.json`
+> * `ocp_configs/github-pat`
+> * `dr-bootstrap/acm/03_channel.yaml`
+> * `install-dir/`
+> * `install-dir-bck/`
+>
+> **ACTION REQUIRED:** Because these files are not tracked by the repository, they will not be restored by a `git clone` or `git pull`. It is your responsibility to **securely back up these files and directories elsewhere**. They contain sensitive credentials and state information that are essential for successfully executing or re-running the disaster recovery procedure.
+
 #### **Phase 1: Preparation and Prerequisites**
 
 Before starting, ensure **every single one** of the following conditions is met:
@@ -108,9 +124,12 @@ With the control plane active, this phase provisions the required node pools.
 
 Now that the cluster has its nodes, we can bootstrap ACM and hand over control.
 
-1.  **Bootstrap ACM and Connect to Git:**
+1.  **Create Git Channel, Bootstrap ACM and Connect to Git:**
     ```bash
-    ./04_bootstrap-acm.sh
+    ./create-channel.sh
+    ```
+    ```bash
+    ./05_bootstrap-acm.sh
     ```
     * **What it does:** This script installs the ACM operator, creates the `MultiClusterHub`, and applies the initial `Application` resource. This `Application` points ACM to the `hub-cluster-config/` directory in this Git repository, activating the GitOps workflow.
 2.  **Monitor GitOps Synchronization:** From this point on, ACM is in control. Monitor its progress from the OpenShift console in the "Applications" and "Governance" sections. ACM will now read your Kustomize overlays and begin deploying the policies for LSO, ODF, and other operators.
@@ -119,7 +138,7 @@ Now that the cluster has its nodes, we can bootstrap ACM and hand over control.
 
 1.  **Run the Final Validation Script:** Once ACM reports that all applications and policies are compliant, run the validation script to confirm the overall health.
     ```bash
-    ./05_validate-dr-cluster.sh
+    ./06_validate-dr-cluster.sh
     ```
 2.  **Handoff to Application Team:** Formally notify the application team that the infrastructure is ready for them to begin their own application recovery procedures.
 

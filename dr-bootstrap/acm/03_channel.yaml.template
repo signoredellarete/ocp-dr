@@ -1,0 +1,27 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: git-channel-dr-ns
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: Channel
+metadata:
+  annotations:
+    apps.open-cluster-management.io/reconcile-rate: high
+  name: git-channel-dr
+  namespace: git-channel-dr-ns
+spec:
+  type: Git
+  pathname: '${ACM_GIT_CHANNEL_REPO_URL}'
+  secretRef:
+    name: git-channel-dr-auth
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: git-channel-dr-auth
+  namespace: git-channel-dr-ns
+data:
+  user: ${ACM_GIT_CHANNEL_USERNAME}
+  accessToken: ${ACM_GIT_CHANNEL_ACCESS_TOKEN}

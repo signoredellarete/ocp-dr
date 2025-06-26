@@ -23,9 +23,24 @@ echo "Waiting for MultiClusterHub to be available..."
 until oc get mch -n open-cluster-management multiclusterhub -o jsonpath='{.status.phase}' 2>/dev/null | grep -q "Running"; do sleep 20; echo -n "."; done
 echo " MultiClusterHub is running."
 
+# --- Pre-flight Check ---
+# Verify that the channel definition file exists before proceeding.
+CHANNEL_FILE="../dr-bootstrap/acm/03_channel.yaml"
+echo "[INFO] Checking for required file: ${CHANNEL_FILE}"
+
+if [ ! -f "$CHANNEL_FILE" ]; then
+    echo ""
+    echo -e "\033[0;31m[ERROR] Channel definition file not found!\033[0m"
+    echo "Please run the '04_create-channel.sh' script first to generate it."
+    exit 1
+fi
+
+echo "[SUCCESS] Prerequisite file found."
+
 # Apply all manifests that define our GitOps Application
 echo "[ACTION] Applying ACM Application, Placement, Channel, and Subscription..."
-oc apply -f ../dr-bootstrap/acm/03_app_hub-infra-operators.yaml
+oc apply -f ../dr-bootstrap/acm/03_channel.yaml
+oc apply -f ../dr-bootstrap/acm/04_app_hub-infra-operators.yaml
 
 if [ $? -eq 0 ]; then
     echo "[SUCCESS] Hub Infrastructure Application bootstrapped."

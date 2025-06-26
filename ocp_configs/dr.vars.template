@@ -80,3 +80,10 @@ export OCP_INFRA_ODF_NODE_REPLICAS=3
 export OCP_INFRA_ODF_NODE_CPU=16
 export OCP_INFRA_ODF_NODE_MEMORY=65536 # in MB (ODF is memory intensive)
 export OCP_INFRA_ODF_NODE_DISK_GB=256
+
+#-----------------------------------------------------------------------
+# ACM Git Channel DR repo
+#-----------------------------------------------------------------------
+export ACM_GIT_CHANNEL_REPO_URL="https://github.com/username/repo-dr"
+export ACM_GIT_CHANNEL_USERNAME="username"
+export ACM_GIT_CHANNEL_ACCESS_TOKEN="ghp_PuRmThsn123RkI8g0a9xGra98jl5Vq1KLC9F"
