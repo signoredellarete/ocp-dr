@@ -28,6 +28,10 @@ spec:
             sourceNamespace: openshift-marketplace
           upgradeApproval: Automatic
           versions:
+          operatorGroup:
+            name: default
+            targetNamespaces:
+              - openshift-local-storage
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
