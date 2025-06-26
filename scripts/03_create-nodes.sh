@@ -21,9 +21,9 @@ export CLUSTER_ID=$(jq -r .infraID ${METADATA_FILE})
 echo "[INFO] Found Infrastructure ID (CLUSTER_ID): ${CLUSTER_ID}"
 
 # --- Step 2: Find the default worker MachineSet ---
-# This step is now unconditional to ensure the variable is always populated.
+# --- MODIFIED --- Using a simpler, more robust jsonpath selector
 echo "[INFO] Finding the default worker MachineSet created by the installer..."
-DEFAULT_WORKER_MS_NAME=$(oc get machineset.machine.openshift.io -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[?(@.spec.template.metadata.labels."machine.openshift.io/cluster-api-machine-role"=="worker")].metadata.name}')
+DEFAULT_WORKER_MS_NAME=$(oc get machineset.machine.openshift.io -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[0].metadata.name}')
 
 if [ -z "$DEFAULT_WORKER_MS_NAME" ]; then
     echo "[ERROR] Could not find the default worker MachineSet. This is unexpected after a successful IPI installation."
@@ -33,12 +33,11 @@ echo "[INFO] Found default worker MachineSet: ${DEFAULT_WORKER_MS_NAME}"
 
 
 # --- Step 3: Determine the vSphere VM Template to use ---
-# Check if user has provided a template name override in dr.vars.
-# If not, detect it automatically from the default worker machineset we just found.
 if [ -n "${OCP_VSPHERE_VM_TEMPLATE}" ]; then
     echo "[INFO] Using user-provided vSphere Template from dr.vars: ${OCP_VSPHERE_VM_TEMPLATE}"
 else
     echo "[INFO] OCP_VSPHERE_VM_TEMPLATE is not set. Detecting it automatically..."
+    # --- MODIFIED --- Using the robust command here as well
     DYNAMIC_TEMPLATE_NAME=$(oc get machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.template}')
     if [ -n "$DYNAMIC_TEMPLATE_NAME" ]; then
         echo "[INFO] Dynamically detected vSphere Template: ${DYNAMIC_TEMPLATE_NAME}"
