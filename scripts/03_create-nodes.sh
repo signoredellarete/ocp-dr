@@ -20,9 +20,8 @@ fi
 export CLUSTER_ID=$(jq -r .infraID ${METADATA_FILE})
 echo "[INFO] Found Infrastructure ID (CLUSTER_ID): ${CLUSTER_ID}"
 
-# --- Step 2: Find the default worker MachineSet ---
-# --- MODIFIED --- Using a simpler, more robust jsonpath selector
-echo "[INFO] Finding the default worker MachineSet created by the installer..."
+# --- Step 2: Find the default worker MachineSet and its VM template ---
+echo "[INFO] Finding the default worker MachineSet to detect the vSphere template..."
 DEFAULT_WORKER_MS_NAME=$(oc get machineset.machine.openshift.io -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[0].metadata.name}')
 
 if [ -z "$DEFAULT_WORKER_MS_NAME" ]; then
@@ -31,30 +30,22 @@ if [ -z "$DEFAULT_WORKER_MS_NAME" ]; then
 fi
 echo "[INFO] Found default worker MachineSet: ${DEFAULT_WORKER_MS_NAME}"
 
-
-# --- Step 3: Determine the vSphere VM Template to use ---
-if [ -n "${OCP_VSPHERE_VM_TEMPLATE}" ]; then
-    echo "[INFO] Using user-provided vSphere Template from dr.vars: ${OCP_VSPHERE_VM_TEMPLATE}"
-else
-    echo "[INFO] OCP_VSPHERE_VM_TEMPLATE is not set. Detecting it automatically..."
-    # --- MODIFIED --- Using the robust command here as well
-    DYNAMIC_TEMPLATE_NAME=$(oc get machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.template}')
-    if [ -n "$DYNAMIC_TEMPLATE_NAME" ]; then
-        echo "[INFO] Dynamically detected vSphere Template: ${DYNAMIC_TEMPLATE_NAME}"
-        export OCP_VSPHERE_VM_TEMPLATE=${DYNAMIC_TEMPLATE_NAME}
-    else
-        echo "[ERROR] Could not detect vSphere template automatically. Please set OCP_VSPHERE_VM_TEMPLATE in dr.vars manually."
-        exit 1
-    fi
+# This logic now runs unconditionally. It detects the template name from the live cluster state.
+DYNAMIC_TEMPLATE_NAME=$(oc get machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.template}')
+if [ -z "$DYNAMIC_TEMPLATE_NAME" ]; then
+    echo "[ERROR] Could not automatically detect the vSphere template name from the existing MachineSet."
+    exit 1
 fi
+export OCP_VSPHERE_VM_TEMPLATE=${DYNAMIC_TEMPLATE_NAME}
+echo "[SUCCESS] Using dynamically detected vSphere Template: ${OCP_VSPHERE_VM_TEMPLATE}"
 
 
-# --- Step 4: Scale Existing Worker MachineSet ---
+# --- Step 3: Scale Existing Worker MachineSet ---
 echo "[ACTION] Scaling the existing worker MachineSet '${DEFAULT_WORKER_MS_NAME}' to ${OCP_WORKER_NODE_REPLICAS} replicas."
 oc scale machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api --replicas=${OCP_WORKER_NODE_REPLICAS}
 
 
-# --- Step 5: Create New Infra and Infra-ODF MachineSets ---
+# --- Step 4: Create New Infra and Infra-ODF MachineSets ---
 create_machineset() {
     export MACHINE_ROLE=$1
     export REPLICAS=$2
@@ -72,12 +63,12 @@ create_machineset "infra" ${OCP_INFRA_NODE_REPLICAS} ${OCP_INFRA_NODE_CPU} ${OCP
 create_machineset "infra-odf" ${OCP_INFRA_ODF_NODE_REPLICAS} ${OCP_INFRA_ODF_NODE_CPU} ${OCP_INFRA_ODF_NODE_MEMORY} ${OCP_INFRA_ODF_NODE_DISK_GB} "cluster.ocs.openshift.io/openshift-storage" ""
 
 
-# --- Step 6: Apply Taints to Infra Nodes ---
+# --- Step 5: Apply Taints to Infra Nodes ---
 echo "[ACTION] Applying MachineConfig to taint 'infra' nodes."
 oc apply -f ../dr-bootstrap/nodes/02_machineconfig-infra-taint.yaml
 
 
-# --- Step 7: Wait for All Nodes to Become Ready ---
+# --- Step 6: Wait for All Nodes to Become Ready ---
 echo "[INFO] Waiting for all worker, infra, and infra-odf nodes to be created and become 'Ready'..."
 echo "[INFO] This can take 15-30 minutes depending on the vSphere environment."
 
