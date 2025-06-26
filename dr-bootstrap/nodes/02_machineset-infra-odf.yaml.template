@@ -15,18 +15,20 @@ spec:
     metadata:
       labels:
         machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
-        machine.openshift.io/cluster-api-machine-role: worker # Based on worker profile
+        machine.openshift.io/cluster-api-machine-role: worker
         machine.openshift.io/cluster-api-machine-type: worker
         machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-infra-odf
-        # Specific labels for the ODF role
-        node-role.kubernetes.io/infra-odf: ""
-        cluster.ocs.openshift.io/openshift-storage: ""
     spec:
-      metadata: {}
-      # Taint to ensure only ODF components are scheduled here
+      metadata:
+        # Node labels are defined here
+        labels:
+          cluster.ocs.openshift.io/openshift-storage: ""
+          node-role.kubernetes.io/infra: ""
+      # Taints are defined here
       taints:
-        - key: node.ocs.openshift.io/storage
-          effect: NoSchedule
+      - effect: NoSchedule
+        key: node.ocs.openshift.io/storage
+        value: "true"
       providerSpec:
         value:
           apiVersion: machine.openshift.io/v1beta1
@@ -36,7 +38,7 @@ spec:
           diskGiB: ${OCP_INFRA_ODF_NODE_DISK_GB}
           memoryMiB: ${OCP_INFRA_ODF_NODE_MEMORY}
           numCPUs: ${OCP_INFRA_ODF_NODE_CPU}
-          numCoresPerSocket: 1
+          numCoresPerSocket: 2 # Using a common default, adjust if needed
           template: ${OCP_VSPHERE_VM_TEMPLATE}
           userDataSecret:
             name: worker-user-data

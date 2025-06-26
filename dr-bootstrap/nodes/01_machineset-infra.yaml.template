@@ -15,17 +15,18 @@ spec:
     metadata:
       labels:
         machine.openshift.io/cluster-api-cluster: ${CLUSTER_ID}
-        machine.openshift.io/cluster-api-machine-role: worker # Based on worker profile
-        machine.openshift.io/cluster-api-machine-type: worker
+        machine.openshift.io/cluster-api-machine-role: infra
+        machine.openshift.io/cluster-api-machine-type: infra
         machine.openshift.io/cluster-api-machineset: ${CLUSTER_ID}-infra
-        # Specific label for the infra role
-        node-role.kubernetes.io/infra: ""
     spec:
-      metadata: {} # This empty metadata block is required
-      # Taint to ensure only infra workloads are scheduled here
+      metadata:
+        # Node labels are defined here
+        labels:
+          node-role.kubernetes.io/infra: ""
+      # Taints are defined here
       taints:
-        - effect: NoSchedule
-          key: node-role.kubernetes.io/infra
+      - key: node-role.kubernetes.io/infra
+        effect: NoSchedule
       providerSpec:
         value:
           apiVersion: machine.openshift.io/v1beta1
@@ -35,7 +36,7 @@ spec:
           diskGiB: ${OCP_INFRA_NODE_DISK_GB}
           memoryMiB: ${OCP_INFRA_NODE_MEMORY}
           numCPUs: ${OCP_INFRA_NODE_CPU}
-          numCoresPerSocket: 1
+          numCoresPerSocket: 2 # Using a common default, adjust if needed
           template: ${OCP_VSPHERE_VM_TEMPLATE}
           userDataSecret:
             name: worker-user-data
