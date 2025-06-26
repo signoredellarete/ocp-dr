@@ -30,6 +30,11 @@ spec:
           memoryMiB: ${MEMORY_MIB}
           numCPUs: ${NUM_CPUS}
           numCoresPerSocket: 1
+          # --- SEZIONE AGGIUNTA ---
+          network:
+            devices:
+            - networkName: ${VSPHERE_NETWORK}
+          # --- FINE SEZIONE AGGIUNTA ---
           snapshot: ""
           template: ${OCP_VSPHERE_VM_TEMPLATE}
           userDataSecret:
