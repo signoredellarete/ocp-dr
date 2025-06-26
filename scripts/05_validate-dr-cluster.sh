@@ -16,69 +16,100 @@ echo -e "\n--- Starting Full Cluster Validation Script ---"
 # Flag to track overall status
 OVERALL_STATUS=0
 
-# Function to check resource status
-check_status() {
-    local component=$1
-    local command_to_run=$2
-    local expected_status=$3
-    local check_name=$4
+# --- 1. Check ClusterOperators ---
+echo -e "\n${YELLOW}Checking: ClusterOperator Health...${NC}"
+FAILED_COs=0
+# Get all ClusterOperators and check their conditions using jq
+CO_STATUS=$(oc get co -o json | jq -r '.items[] | .metadata.name + " " + (.status.conditions[] | select(.type=="Available").status) + " " + (.status.conditions[] | select(.type=="Progressing").status) + " " + (.status.conditions[] | select(.type=="Degraded").status)')
 
-    echo -e "\n${YELLOW}Checking: ${component}...${NC}"
+while read -r line; do
+    NAME=$(echo $line | awk '{print $1}')
+    AVAILABLE=$(echo $line | awk '{print $2}')
+    PROGRESSING=$(echo $line | awk '{print $3}')
+    DEGRADED=$(echo $line | awk '{print $4}')
     
-    # Run the command and capture the output
-    output=$(eval "$command_to_run")
-    
-    # Check if any item does NOT match the expected status
-    if echo "$output" | grep -v "$expected_status"; then
-        echo -e "[ ${RED}FAIL${NC} ] One or more '${component}' components are not in the '${expected_status}' state."
-        echo "------"
-        echo "$output"
-        echo "------"
-        OVERALL_STATUS=1
-    else
-        echo -e "[ ${GREEN}OK${NC} ] All '${component}' components are '${expected_status}'."
+    if [ "$AVAILABLE" != "True" ] || [ "$PROGRESSING" != "False" ] || [ "$DEGRADED" != "False" ]; then
+        echo -e "[ ${RED}FAIL${NC} ] ClusterOperator '${NAME}' is not healthy. State: Available=${AVAILABLE}, Progressing=${PROGRESSING}, Degraded=${DEGRADED}"
+        FAILED_COs=$((FAILED_COs + 1))
     fi
-}
+done <<< "$CO_STATUS"
 
-# 1. Check ClusterOperators
-check_status "ClusterOperators" \
-             "oc get co -o custom-columns=NAME:.metadata.name,AVAILABLE:.status.conditions[?(@.type=='Available')].status,PROGRESSING:.status.conditions[?(@.type=='Progressing')].status,DEGRADED:.status.conditions[?(@.type=='Degraded')].status | grep -v 'True.*True.*True'" \
-             "" \
-             "Not Degraded/Progressing"
+if [ "$FAILED_COs" -eq 0 ]; then
+    echo -e "[ ${GREEN}OK${NC} ] All ClusterOperators are healthy."
+else
+    OVERALL_STATUS=1
+fi
 
-# 2. Check Node Status
-check_status "Nodes" \
-             "oc get nodes --no-headers | awk '{print \$2}'" \
-             "Ready" \
-             "Nodes are Ready"
+# --- 2. Check Node Status ---
+echo -e "\n${YELLOW}Checking: Node Health...${NC}"
+NON_READY_NODES=$(oc get nodes -o json | jq -r '[.items[] | select((.spec.taints | select(.effect == "NoSchedule" and .key == "node-role.kubernetes.io/master") | length) == 0) | select(.status.conditions[] | .type == "Ready" and .status != "True")] | .[] | .metadata.name')
 
-# 3. Check Core Operator Pods
-echo -e "\n${YELLOW}Checking Core Operator Pod Health...${NC}"
-NAMESPACES="openshift-local-storage open-cluster-management openshift-storage openshift-gitops openshift-sso"
-for ns in $NAMESPACES; do
-    echo " -> Namespace: $ns"
-    if ! oc get pods -n $ns --no-headers | grep -v "Running\|Completed"; then
-        echo -e "    [ ${GREEN}OK${NC} ] All pods are Running or Completed."
+if [ -z "$NON_READY_NODES" ]; then
+    echo -e "[ ${GREEN}OK${NC} ] All worker/infra nodes are in 'Ready' state."
+else
+    echo -e "[ ${RED}FAIL${NC} ] The following nodes are not Ready:"
+    echo "$NON_READY_NODES"
+    OVERALL_STATUS=1
+fi
+
+# --- 3. Check Core Operator Pods ---
+echo -e "\n${YELLOW}Checking: Core Operator Pod Health...${NC}"
+# Added openshift-storage to the list
+NAMESPACES_TO_CHECK="openshift-local-storage open-cluster-management openshift-storage openshift-gitops openshift-sso"
+for ns in $NAMESPACES_TO_CHECK; do
+    echo -n " -> Namespace: $ns ... "
+    # Check if the namespace exists first
+    if ! oc get ns "$ns" &> /dev/null; then
+        echo -e "[ ${YELLOW}SKIP${NC} ] Namespace does not exist."
+        continue
+    fi
+    
+    # Get pods that are not Running or Completed
+    PROBLEM_PODS=$(oc get pods -n "$ns" --no-headers | grep -v "Running" | grep -v "Completed" || true)
+    
+    if [ -z "$PROBLEM_PODS" ]; then
+        echo -e "[ ${GREEN}OK${NC} ]"
     else
-        echo -e "    [ ${RED}FAIL${NC} ] Some pods in namespace '$ns' are not Running/Completed:"
-        oc get pods -n $ns | grep -v "Running\|Completed"
+        echo -e "[ ${RED}FAIL${NC} ]"
+        echo "$PROBLEM_PODS"
         OVERALL_STATUS=1
     fi
 done
 
-# 4. Check for ODF StorageClasses
-echo -e "\n${YELLOW}Checking for StorageClasses...${NC}"
-if oc get sc local-sc-for-odf &>/dev/null && oc get sc ocs-storagecluster-ceph-rbd &>/dev/null; then
-    echo -e "[ ${GREEN}OK${NC} ] Required StorageClasses (local-sc-for-odf, ocs-storagecluster-ceph-rbd) found."
+# --- 4. Check ACM and ODF Health ---
+echo -e "\n${YELLOW}Checking: ACM and ODF Custom Resource Health...${NC}"
+# Check MultiClusterHub status
+MCH_PHASE=$(oc get mch -n open-cluster-management multiclusterhub -o jsonpath='{.status.phase}' 2>/dev/null)
+if [ "$MCH_PHASE" == "Running" ]; then
+    echo -e "[ ${GREEN}OK${NC} ] MultiClusterHub status is 'Running'."
 else
-    echo -e "[ ${RED}FAIL${NC} ] One or more required StorageClasses are missing."
+    echo -e "[ ${RED}FAIL${NC} ] MultiClusterHub status is '${MCH_PHASE:-Not Found}'."
     OVERALL_STATUS=1
 fi
 
-# Final Summary
+# Check StorageCluster status (most important ODF check)
+STORAGECLUSTER_PHASE=$(oc get storagecluster -n openshift-storage -o jsonpath='{.items[0].status.phase}' 2>/dev/null)
+if [ "$STORAGECLUSTER_PHASE" == "Ready" ]; then
+    echo -e "[ ${GREEN}OK${NC} ] ODF StorageCluster status is 'Ready'."
+else
+    echo -e "[ ${RED}FAIL${NC} ] ODF StorageCluster status is '${STORAGECLUSTER_PHASE:-Not Found}'."
+    OVERALL_STATUS=1
+fi
+
+# --- 5. Check for ODF StorageClasses ---
+echo -e "\n${YELLOW}Checking: StorageClass Availability...${NC}"
+if oc get sc ocs-storagecluster-ceph-rbd &>/dev/null; then
+    echo -e "[ ${GREEN}OK${NC} ] ODF StorageClass 'ocs-storagecluster-ceph-rbd' found."
+else
+    echo -e "[ ${RED}FAIL${NC} ] ODF StorageClass 'ocs-storagecluster-ceph-rbd' is missing."
+    OVERALL_STATUS=1
+fi
+
+# --- Final Summary ---
 echo -e "\n--- Validation Summary ---"
 if [ $OVERALL_STATUS -eq 0 ]; then
-    echo -e "[ ${GREEN}SUCCESS${NC} ] The OpenShift DR cluster infrastructure appears to be healthy and ready."
+    echo -e "[ ${GREEN}SUCCESS${NC} ] The OpenShift DR cluster infrastructure appears to be healthy and ready for handoff."
+    exit 0
 else
     echo -e "[ ${RED}FAILURE${NC} ] The validation script found one or more issues. Please review the logs above."
     exit 1
