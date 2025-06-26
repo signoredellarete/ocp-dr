@@ -23,12 +23,9 @@ echo "Waiting for MultiClusterHub to be available..."
 until oc get mch -n open-cluster-management multiclusterhub -o jsonpath='{.status.phase}' 2>/dev/null | grep -q "Running"; do sleep 20; echo -n "."; done
 echo " MultiClusterHub is running."
 
-# --- 2. Apply ACM Application and Permissions ---
-echo -e "\n--- Applying ACM Application to enable GitOps ---"
-
 # Apply all manifests that define our GitOps Application
 echo "[ACTION] Applying ACM Application, Placement, Channel, and Subscription..."
-oc apply -f ../dr-bootstrap/acm/04_app_hub-infra-operators.yaml
+oc apply -f ../dr-bootstrap/acm/03_app_hub-infra-operators.yaml
 
 if [ $? -eq 0 ]; then
     echo "[SUCCESS] Hub Infrastructure Application bootstrapped."

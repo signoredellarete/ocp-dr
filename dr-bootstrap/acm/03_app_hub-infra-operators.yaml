@@ -95,3 +95,11 @@ metadata:
   name: default
 spec:
   clusterSet: default
+---
+apiVersion: cluster.open-cluster-management.io/v1beta2
+kind: ManagedClusterSetBinding
+metadata:
+  name: default
+  namespace: open-cluster-management
+spec:
+  clusterSet: default
