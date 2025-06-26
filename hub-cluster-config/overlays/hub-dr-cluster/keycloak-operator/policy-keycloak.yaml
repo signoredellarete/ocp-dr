@@ -15,7 +15,7 @@ spec:
         apiVersion: policy.open-cluster-management.io/v1beta1
         kind: OperatorPolicy
         metadata:
-          name: install-operator-2
+          name: policy-keycloak
         spec:
           remediationAction: enforce
           severity: medium
