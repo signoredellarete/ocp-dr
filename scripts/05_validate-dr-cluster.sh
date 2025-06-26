@@ -42,7 +42,6 @@ fi
 
 # --- 2. Check Node Status ---
 echo -e "\n${YELLOW}Checking: Node Health...${NC}"
-# --- MODIFIED --- Using a simpler and correct label selector to exclude masters first
 NON_READY_NODES=$(oc get nodes -l 'node-role.kubernetes.io/master!=' -o json | jq -r '[.items[] | select(.status.conditions[] | .type=="Ready" and .status!="True")] | .[] | .metadata.name')
 
 if [ -z "$NON_READY_NODES" ]; then
@@ -55,12 +54,13 @@ fi
 
 # --- 3. Check Core Operator Pods ---
 echo -e "\n${YELLOW}Checking: Core Operator Pod Health...${NC}"
-NAMESPACES_TO_CHECK="openshift-local-storage open-cluster-management openshift-storage openshift-gitops openshift-sso"
+# --- MODIFIED --- Replaced 'openshift-sso' with 'keycloak'
+NAMESPACES_TO_CHECK="openshift-local-storage open-cluster-management openshift-storage openshift-gitops keycloak"
 for ns in $NAMESPACES_TO_CHECK; do
     echo -n " -> Namespace: $ns ... "
     # Check if the namespace exists first
     if ! oc get ns "$ns" &> /dev/null; then
-        echo -e "[ ${YELLOW}SKIP${NC} ] Namespace does not exist."
+        echo -e "[ ${YELLOW}SKIP${NC} ] Namespace does not exist. This is OK if the operator is not yet deployed."
         continue
     fi
     
