@@ -4,7 +4,7 @@ set -e
 # Load environment variables from config file
 source ../ocp_configs/dr.vars
 
-# Set KUBECONFIG to connect to the cluster
+# Set KUBECONFIG to connect to the new cluster
 export KUBECONFIG=${OCP_INSTALL_DIR}/auth/kubeconfig
 
 echo "--- Starting Worker and Infra Node Provisioning ---"
@@ -12,8 +12,6 @@ echo "--- Starting Worker and Infra Node Provisioning ---"
 # --- Step 1: Gather Dynamically Generated Cluster Information ---
 echo "[INFO] Gathering information from the newly created cluster..."
 
-# The CLUSTER_ID (or more accurately, Infrastructure ID) is required for naming and finding resources.
-# It is stored in the metadata.json file created by the installer.
 METADATA_FILE="${OCP_INSTALL_DIR}/metadata.json"
 if [ ! -f "$METADATA_FILE" ]; then
     echo "[ERROR] Metadata file not found at $METADATA_FILE. Cannot proceed."
@@ -23,22 +21,21 @@ export CLUSTER_ID=$(jq -r .infraID ${METADATA_FILE})
 echo "[INFO] Found Infrastructure ID (CLUSTER_ID): ${CLUSTER_ID}"
 
 # Check if user has provided a template name override in dr.vars.
-# If not, detect it automatically from the default worker machineset.
 if [ -n "${OCP_VSPHERE_VM_TEMPLATE}" ]; then
     echo "[INFO] Using user-provided vSphere Template from dr.vars: ${OCP_VSPHERE_VM_TEMPLATE}"
 else
     echo "[INFO] OCP_VSPHERE_VM_TEMPLATE is not set. Attempting to detect it dynamically..."
     
-    # Find the default worker MachineSet created by the installer
-    DEFAULT_WORKER_MS_NAME=$(oc get machineset -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[?(@.spec.template.metadata.labels."machine.openshift.io/cluster-api-machine-role"=="worker")].metadata.name}')
+    # --- MODIFIED --- Be explicit with the resource type
+    DEFAULT_WORKER_MS_NAME=$(oc get machineset.machine.openshift.io -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[?(@.spec.template.metadata.labels."machine.openshift.io/cluster-api-machine-role"=="worker")].metadata.name}')
     if [ -z "$DEFAULT_WORKER_MS_NAME" ]; then
         echo "[ERROR] Could not find the default worker MachineSet to detect the template."
         exit 1
     fi
     echo "[INFO] Found default worker MachineSet for template detection: ${DEFAULT_WORKER_MS_NAME}"
     
-    # Dynamically find the vSphere VM template name from the existing MachineSet
-    DYNAMIC_TEMPLATE_NAME=$(oc get machineset ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.template}')
+    # --- MODIFIED --- Be explicit with the resource type
+    DYNAMIC_TEMPLATE_NAME=$(oc get machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME} -n openshift-machine-api -o jsonpath='{.spec.template.spec.providerSpec.value.template}')
     if [ -n "$DYNAMIC_TEMPLATE_NAME" ]; then
         echo "[INFO] Dynamically detected vSphere Template: ${DYNAMIC_TEMPLATE_NAME}"
         export OCP_VSPHERE_VM_TEMPLATE=${DYNAMIC_TEMPLATE_NAME}
@@ -50,10 +47,10 @@ fi
 
 
 # --- Step 2: Scale Existing Worker MachineSet ---
-# Find the default worker machineset again to scale it. This is safer in case there are multiple.
-DEFAULT_WORKER_MS_NAME_TO_SCALE=$(oc get machineset -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[?(@.spec.template.metadata.labels."machine.openshift.io/cluster-api-machine-role"=="worker")].metadata.name}')
+# --- MODIFIED --- Be explicit with the resource type
+DEFAULT_WORKER_MS_NAME_TO_SCALE=$(oc get machineset.machine.openshift.io -n openshift-machine-api -l "machine.openshift.io/cluster-api-cluster=${CLUSTER_ID}" -o jsonpath='{.items[?(@.spec.template.metadata.labels."machine.openshift.io/cluster-api-machine-role"=="worker")].metadata.name}')
 echo "[ACTION] Scaling the existing worker MachineSet '${DEFAULT_WORKER_MS_NAME_TO_SCALE}' to ${OCP_WORKER_NODE_REPLICAS} replicas."
-oc scale machineset ${DEFAULT_WORKER_MS_NAME_TO_SCALE} -n openshift-machine-api --replicas=${OCP_WORKER_NODE_REPLICAS}
+oc scale machineset.machine.openshift.io ${DEFAULT_WORKER_MS_NAME_TO_SCALE} -n openshift-machine-api --replicas=${OCP_WORKER_NODE_REPLICAS}
 
 
 # --- Step 3: Create New Infra and Infra-ODF MachineSets ---
@@ -64,9 +61,8 @@ create_machineset() {
     export NUM_CPUS=$3
     export MEMORY_MIB=$4
     export DISK_GIB=$5
-    # Use 'node-role.kubernetes.io/<role>' for the key for infra nodes
     export NODE_LABEL_KEY=${6:-"node-role.kubernetes.io/${1}"} 
-    export NODE_LABEL_VALUE=${7:-""} # Value is empty for standard role labels
+    export NODE_LABEL_VALUE=${7:-""}
 
     echo "[ACTION] Creating MachineSet for role: ${MACHINE_ROLE}"
     envsubst < ../dr-bootstrap/nodes/01_machineset.yaml.template | oc apply -f -
