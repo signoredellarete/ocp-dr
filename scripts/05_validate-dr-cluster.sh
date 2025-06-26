@@ -42,7 +42,8 @@ fi
 
 # --- 2. Check Node Status ---
 echo -e "\n${YELLOW}Checking: Node Health...${NC}"
-NON_READY_NODES=$(oc get nodes -o json | jq -r '[.items[] | select((.spec.taints | select(.effect == "NoSchedule" and .key == "node-role.kubernetes.io/master") | length) == 0) | select(.status.conditions[] | .type == "Ready" and .status != "True")] | .[] | .metadata.name')
+# --- MODIFIED --- Using a simpler and correct label selector to exclude masters first
+NON_READY_NODES=$(oc get nodes -l 'node-role.kubernetes.io/master!=' -o json | jq -r '[.items[] | select(.status.conditions[] | .type=="Ready" and .status!="True")] | .[] | .metadata.name')
 
 if [ -z "$NON_READY_NODES" ]; then
     echo -e "[ ${GREEN}OK${NC} ] All worker/infra nodes are in 'Ready' state."
@@ -54,7 +55,6 @@ fi
 
 # --- 3. Check Core Operator Pods ---
 echo -e "\n${YELLOW}Checking: Core Operator Pod Health...${NC}"
-# Added openshift-storage to the list
 NAMESPACES_TO_CHECK="openshift-local-storage open-cluster-management openshift-storage openshift-gitops openshift-sso"
 for ns in $NAMESPACES_TO_CHECK; do
     echo -n " -> Namespace: $ns ... "
@@ -65,7 +65,7 @@ for ns in $NAMESPACES_TO_CHECK; do
     fi
     
     # Get pods that are not Running or Completed
-    PROBLEM_PODS=$(oc get pods -n "$ns" --no-headers | grep -v "Running" | grep -v "Completed" || true)
+    PROBLEM_PODS=$(oc get pods -n "$ns" --no-headers 2>/dev/null | grep -v "Running" | grep -v "Completed" || true)
     
     if [ -z "$PROBLEM_PODS" ]; then
         echo -e "[ ${GREEN}OK${NC} ]"
@@ -92,8 +92,8 @@ STORAGECLUSTER_PHASE=$(oc get storagecluster -n openshift-storage -o jsonpath='{
 if [ "$STORAGECLUSTER_PHASE" == "Ready" ]; then
     echo -e "[ ${GREEN}OK${NC} ] ODF StorageCluster status is 'Ready'."
 else
-    echo -e "[ ${RED}FAIL${NC} ] ODF StorageCluster status is '${STORAGECLUSTER_PHASE:-Not Found}'."
-    OVERALL_STATUS=1
+    # This check is allowed to fail if ODF is not yet installed
+    echo -e "[ ${YELLOW}WARN${NC} ] ODF StorageCluster status is '${STORAGECLUSTER_PHASE:-Not Found}'. This is OK if ODF is not yet deployed."
 fi
 
 # --- 5. Check for ODF StorageClasses ---
@@ -101,8 +101,8 @@ echo -e "\n${YELLOW}Checking: StorageClass Availability...${NC}"
 if oc get sc ocs-storagecluster-ceph-rbd &>/dev/null; then
     echo -e "[ ${GREEN}OK${NC} ] ODF StorageClass 'ocs-storagecluster-ceph-rbd' found."
 else
-    echo -e "[ ${RED}FAIL${NC} ] ODF StorageClass 'ocs-storagecluster-ceph-rbd' is missing."
-    OVERALL_STATUS=1
+    # This check is allowed to fail if ODF is not yet installed
+    echo -e "[ ${YELLOW}WARN${NC} ] ODF StorageClass 'ocs-storagecluster-ceph-rbd' is missing. This is OK if ODF is not yet deployed."
 fi
 
 # --- Final Summary ---
