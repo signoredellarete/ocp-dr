@@ -52,7 +52,14 @@ Before starting, ensure **every single one** of the following conditions is met:
 -   [ ] **Confirmation Received:** The **Network Team** has confirmed that all required DR networking, firewall rules, and DNS are active.
 -   [ ] **Access:** You have SSH access to the restored Bastion Host.
 -   [ ] **Git Repository:** This Git repository has been cloned to the Bastion Host.
--   [ ] **Configuration:** All variables in the `ocp_configs/dr.vars` file have been reviewed and populated with the correct values for the DR environment, including the new node sizing and replica counts.
+-   [ ] **Configuration (`dr.vars`):** The `ocp_configs/dr.vars` file has been created from its template and populated with all correct values for the DR environment.
+
+    **Note on Configuration:** The Git repository contains a template at `ocp_configs/dr.vars.template` with placeholder values. To prepare for the DR procedure, you must first create your local configuration by copying this file:
+    ```bash
+    cp ocp_configs/dr.vars.template ocp_configs/dr.vars
+    ```
+    Next, edit the newly created `ocp_configs/dr.vars` file and replace all placeholders with the real values for your environment (vCenter credentials, node counts, etc.). The `dr.vars` file is intentionally listed in `.gitignore` and **must not be committed to the repository** to protect sensitive data.
+
 
 #### **Phase 2: Base Cluster Provisioning**
 
