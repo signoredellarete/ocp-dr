@@ -28,10 +28,6 @@ spec:
             sourceNamespace: openshift-marketplace
           upgradeApproval: Automatic
           versions:
-          operatorGroup:
-            name: default
-            targetNamespaces:
-              - openshift-gitops-operator
 ---
 apiVersion: policy.open-cluster-management.io/v1
 kind: PlacementBinding
